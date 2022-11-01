@@ -1,5 +1,5 @@
 CC=clang
-CFLAGS=-Wall -Wextra -Werror -pedantic -std=c2x -march=native -D_POSIX_C_SOURCE=200809
+CFLAGS=-Wall -Wextra -Werror -pedantic -std=c2x -march=native -D_POSIX_C_SOURCE=200809 -Iinclude
 BUILD-DIR=build
 SRC-DIR=src
 TEST-DIR=tests

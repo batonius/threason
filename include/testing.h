@@ -1,3 +1,5 @@
+#pragma once
+
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -85,7 +87,7 @@ typedef struct {
         suite_results.total_tests += test_result.total_tests;             \
         suite_results.failed_tests += test_result.failed_tests;           \
     }                                                                     \
-    printf("Suite tests %zd, failed %zd.\n", suite_results.total_tests,   \
+    printf("Suite assertions %zd, failed %zd.\n", suite_results.total_tests,   \
            suite_results.failed_tests);                                   \
     final_results.total_tests += suite_results.total_tests;               \
     final_results.failed_tests += suite_results.failed_tests;             \
@@ -99,7 +101,7 @@ typedef struct {
         test_result_t final_results = {.total_tests = 0, .failed_tests = 0};
 
 #define END_MAIN()                                                      \
-    printf("Total tests %zd, failed %zd.\n", final_results.total_tests, \
+    printf("Total assertions %zd, failed %zd.\n", final_results.total_tests, \
            final_results.failed_tests);                                 \
     return final_results.failed_tests > 0 ? 1 : 0;                      \
     }
