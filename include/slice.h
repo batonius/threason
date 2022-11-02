@@ -3,9 +3,11 @@
 #include <stdlib.h>
 
 typedef struct {
-    char* data;
     size_t size;
+    char* data;
 } thsn_slice_t;
+
+#define THSN_SLICE_MAKE_EMPTY() (thsn_slice_t) { .data = NULL, .size = 0 }
 
 #define THSN_SLICE_MAKE(data, size) \
     (thsn_slice_t) { .data = (data), .size = (size) }

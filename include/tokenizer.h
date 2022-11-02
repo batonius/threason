@@ -15,9 +15,7 @@ typedef enum {
     THSN_TOKEN_TRUE,
     THSN_TOKEN_FALSE,
     THSN_TOKEN_STRING,
-    THSN_TOKEN_ESCAPED_STRING,
     THSN_TOKEN_UNCLOSED_STRING,
-    THSN_TOKEN_UNCLOSED_ESCAPED_STRING,
     THSN_TOKEN_COLON,
     THSN_TOKEN_COMMA,
     THSN_TOKEN_OPEN_BRACKET,
@@ -70,8 +68,8 @@ thsn_result_t thsn_next_token(thsn_slice_t* /*in/out*/ buffer_slice,
             *token = THSN_TOKEN_COLON;
             return THSN_RESULT_SUCCESS;
         case 'n':
-            if (buffer_slice->size >= 3 &&
-                strncmp(buffer_slice->data, "ull", 3) == 0) {
+            if (buffer_slice->size >= 3 && buffer_slice->data[0] == 'u' &&
+                buffer_slice->data[1] == 'l' && buffer_slice->data[2] == 'l') {
                 *token = THSN_TOKEN_NULL;
                 token_slice->size = 4;
                 THSN_SLICE_ADVANCE_UNSAFE(*buffer_slice, 3);
@@ -80,8 +78,8 @@ thsn_result_t thsn_next_token(thsn_slice_t* /*in/out*/ buffer_slice,
                 return THSN_RESULT_INPUT_ERROR;
             }
         case 't':
-            if (buffer_slice->size >= 3 &&
-                strncmp(buffer_slice->data, "rue", 3) == 0) {
+            if (buffer_slice->size >= 3 && buffer_slice->data[0] == 'r' &&
+                buffer_slice->data[1] == 'u' && buffer_slice->data[2] == 'e') {
                 *token = THSN_TOKEN_TRUE;
                 token_slice->size = 4;
                 THSN_SLICE_ADVANCE_UNSAFE(*buffer_slice, 3);
@@ -90,8 +88,9 @@ thsn_result_t thsn_next_token(thsn_slice_t* /*in/out*/ buffer_slice,
                 return THSN_RESULT_INPUT_ERROR;
             }
         case 'f':
-            if (buffer_slice->size >= 4 &&
-                strncmp(buffer_slice->data, "alse", 4) == 0) {
+            if (buffer_slice->size >= 4 && buffer_slice->data[0] == 'a' &&
+                buffer_slice->data[1] == 'l' && buffer_slice->data[2] == 's' &&
+                buffer_slice->data[3] == 'e') {
                 *token = THSN_TOKEN_FALSE;
                 token_slice->size = 5;
                 THSN_SLICE_ADVANCE_UNSAFE(*buffer_slice, 4);
@@ -102,7 +101,6 @@ thsn_result_t thsn_next_token(thsn_slice_t* /*in/out*/ buffer_slice,
         case '"': {
             token_slice->data = buffer_slice->data;
             token_slice->size = 0;
-            bool escape_present = false;
             do {
                 const char* closing_quotes =
                     memchr(buffer_slice->data, '"', buffer_slice->size);
@@ -110,16 +108,14 @@ thsn_result_t thsn_next_token(thsn_slice_t* /*in/out*/ buffer_slice,
                     token_slice->size += buffer_slice->size;
                     THSN_SLICE_ADVANCE_UNSAFE(*buffer_slice,
                                               buffer_slice->size);
-                    *token = escape_present ? THSN_TOKEN_UNCLOSED_ESCAPED_STRING
-                                            : THSN_TOKEN_UNCLOSED_STRING;
+                    *token = THSN_TOKEN_UNCLOSED_STRING;
                     return THSN_RESULT_SUCCESS;
                 }
                 // `closing quotes` is between buffer_slice->data and
                 // buffer_slice->data + bufer_slice.size - 1
                 if (closing_quotes == buffer_slice->data) {
                     THSN_SLICE_ADVANCE_UNSAFE(*buffer_slice, 1);
-                    *token = escape_present ? THSN_TOKEN_ESCAPED_STRING
-                                            : THSN_TOKEN_STRING;
+                    *token = THSN_TOKEN_STRING;
                     return THSN_RESULT_SUCCESS;
                 }
                 // `closing quotes` is between buffer_slice->data+1 and
@@ -134,8 +130,7 @@ thsn_result_t thsn_next_token(thsn_slice_t* /*in/out*/ buffer_slice,
                         closing_quotes - buffer_slice->data;
                     token_slice->size += step_size;
                     THSN_SLICE_ADVANCE_UNSAFE(*buffer_slice, step_size + 1);
-                    *token = escape_present ? THSN_TOKEN_ESCAPED_STRING
-                                            : THSN_TOKEN_STRING;
+                    *token = THSN_TOKEN_STRING;
                     return THSN_RESULT_SUCCESS;
                 }
                 // `+1` to step over the escaped quote
@@ -143,7 +138,6 @@ thsn_result_t thsn_next_token(thsn_slice_t* /*in/out*/ buffer_slice,
                     (closing_quotes - buffer_slice->data) + 1;
                 token_slice->size += step_size;
                 THSN_SLICE_ADVANCE_UNSAFE(*buffer_slice, step_size);
-                escape_present = true;
             } while (1);
         }
         case '-':
