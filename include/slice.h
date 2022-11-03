@@ -9,8 +9,8 @@ typedef struct {
 
 #define THSN_SLICE_MAKE_EMPTY() (thsn_slice_t) { .data = NULL, .size = 0 }
 
-#define THSN_SLICE_MAKE(data, size) \
-    (thsn_slice_t) { .data = (data), .size = (size) }
+#define THSN_SLICE_MAKE(data_, size_) \
+    (thsn_slice_t) { .data = (data_), .size = (size_) }
 
 #define THSN_SLICE_FROM_VAR(v) \
     (thsn_slice_t) { .data = (char*)&(v), .size = sizeof(v) }

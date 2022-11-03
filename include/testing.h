@@ -19,14 +19,14 @@ typedef struct {
 } bench_result_t;
 
 #define TEST(name)                                                         \
-    static void test_function_##name(test_result_t* test_result);          \
-    static test_result_t name() {                                          \
+    void test_function_##name(test_result_t* test_result);                 \
+    test_result_t name() {                                                 \
         test_result_t test_result = {.total_tests = 0, .failed_tests = 0}; \
         test_result.test_name = #name;                                     \
         test_function_##name(&test_result);                                \
         return test_result;                                                \
     }                                                                      \
-    static void test_function_##name(test_result_t* test_result)
+    void test_function_##name(test_result_t* test_result)
 
 #define ASSERT_EQ(A, B)                                                        \
     do {                                                                       \
@@ -77,6 +77,51 @@ typedef struct {
                     __FILE__, __LINE__, #A, #B, (A), (B));               \
         }                                                                \
     } while (0)
+
+#define ASSERT_SUCCESS(v) ASSERT_EQ((v), THSN_RESULT_SUCCESS)
+
+#define ASSERT_SLICE_EQ_BYTES(slice_)     \
+    do {                                  \
+        ++test_result->total_tests;       \
+        thsn_slice_t slice = slice_;      \
+        const char* slice_name = #slice_; \
+    char bytes[] = {
+#define END_BYTES()                                                         \
+    }                                                                       \
+    ;                                                                       \
+    if (slice.size != sizeof(bytes)) {                                      \
+        ++test_result->failed_tests;                                        \
+        fprintf(stderr,                                                     \
+                "        %s:%d: slice %s has size %zu, expected %zu.\n",    \
+                __FILE__, __LINE__, slice_name, slice.size, sizeof(bytes)); \
+        fprintf(stderr, "        slice: ");                                 \
+        for (size_t i = 0; i < 60 && i < slice.size; ++i) {                 \
+            fprintf(stderr, "%02X ", (unsigned char)slice.data[i]);              \
+        }                                                                   \
+        fprintf(stderr, "\n");                                              \
+        fprintf(stderr, "        bytes: ");                                 \
+        for (size_t i = 0; i < 60 && i < sizeof(bytes); ++i) {              \
+            fprintf(stderr, "%02X ", (unsigned char)bytes[i]);                   \
+        }                                                                   \
+        fprintf(stderr, "\n");                                              \
+    }                                                                       \
+    if (memcmp(slice.data, bytes, slice.size) != 0) {                       \
+        ++test_result->failed_tests;                                        \
+        fprintf(stderr, "        %s:%d: slice %s differs from bytes.\n",    \
+                __FILE__, __LINE__, slice_name);                            \
+        fprintf(stderr, "        slice: ");                                 \
+        for (size_t i = 0; i < 60 && i < slice.size; ++i) {                 \
+            fprintf(stderr, "%02X ", (unsigned char)slice.data[i]);              \
+        }                                                                   \
+        fprintf(stderr, "\n");                                              \
+        fprintf(stderr, "        bytes: ");                                 \
+        for (size_t i = 0; i < 60 && i < sizeof(bytes); ++i) {                 \
+            fprintf(stderr, "%02X ", (unsigned char)bytes[i]);                   \
+        }                                                                   \
+        fprintf(stderr, "\n");                                              \
+    }                                                                       \
+    }                                                                       \
+    while (0)
 
 #define TEST_SUITE(name)                                                     \
     {                                                                        \

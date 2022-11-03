@@ -2,8 +2,6 @@
 #include "testing.h"
 #include <string.h>
 
-#define ASSERT_SUCCESS(v) ASSERT_EQ((v), THSN_RESULT_SUCCESS)
-
 TEST(stores_null) {
 	thsn_vector_t vector;
 	ASSERT_SUCCESS(thsn_vector_make(&vector, 1024));
@@ -28,18 +26,17 @@ TEST(stores_bools) {
 }
 
 TEST(stores_ints) {
-	int8_t a = 123;
-	int16_t b = 12345;
-	int32_t c = 1234567;
-	int64_t d = INT64_MAX;
-	int64_t e = 0;
+	int8_t a;
+	int16_t b;
+	int32_t c;
+	int64_t d;
 	thsn_vector_t vector;
 	ASSERT_SUCCESS(thsn_vector_make(&vector, 1024));
-	ASSERT_SUCCESS(thsn_vector_store_int(&vector, a));
-	ASSERT_SUCCESS(thsn_vector_store_int(&vector, b));
-	ASSERT_SUCCESS(thsn_vector_store_int(&vector, c));
-	ASSERT_SUCCESS(thsn_vector_store_int(&vector, d));
-	ASSERT_SUCCESS(thsn_vector_store_int(&vector, e));
+	ASSERT_SUCCESS(thsn_vector_store_int(&vector, 123));
+	ASSERT_SUCCESS(thsn_vector_store_int(&vector, 12345));
+	ASSERT_SUCCESS(thsn_vector_store_int(&vector, 1234567));
+	ASSERT_SUCCESS(thsn_vector_store_int(&vector, INT64_MAX));
+	ASSERT_SUCCESS(thsn_vector_store_int(&vector, 0));
 	ASSERT_EQ(vector.offset, 5 + 1 + 2 + 4 + 8);
 	ASSERT_EQ(vector.buffer[0], THSN_TAG_MAKE(THSN_TAG_INT, THSN_TAG_SIZE_INT8));
 	memcpy(&a, vector.buffer + 1, sizeof(a));

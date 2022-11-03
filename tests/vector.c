@@ -1,8 +1,6 @@
 #include "testing.h"
 #include "vector.h"
 
-#define ASSERT_SUCCESS(v) ASSERT_EQ((v), THSN_RESULT_SUCCESS)
-
 TEST(allocates_vector) {
 	thsn_vector_t vector = {.buffer = NULL, .capacity = 0, .offset = 1};
 	ASSERT_SUCCESS(thsn_vector_make(&vector, 1024));

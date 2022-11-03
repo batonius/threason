@@ -22,8 +22,15 @@ typedef enum {
 
 #define BAIL_ON_ERROR(r)                     \
     do {                                     \
-        thsn_result_t result = (r);          \
-        if (result != THSN_RESULT_SUCCESS) { \
-            return result;                   \
+        thsn_result_t __result = (r);          \
+        if (__result != THSN_RESULT_SUCCESS) { \
+            return __result;                   \
+        }                                    \
+    } while (0)
+
+#define GOTO_ON_ERROR(r, label)              \
+    do {                                     \
+        if ((r) != THSN_RESULT_SUCCESS) { \
+            goto label;                      \
         }                                    \
     } while (0)
