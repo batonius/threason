@@ -7,7 +7,10 @@ typedef enum {
     THSN_PARSER_STATE_FINISH,
     THSN_PARSER_STATE_FIRST_ARRAY_ELEMENT,
     THSN_PARSER_STATE_NEXT_ARRAY_ELEMENT,
-    THSN_PARSER_STATE_OPEN_OBJECT,
+    THSN_PARSER_STATE_FIRST_KV,
+    THSN_PARSER_STATE_KV_COLON,
+    THSN_PARSER_STATE_KV_END,
+    THSN_PARSER_STATE_NEXT_KV,
 } thsn_parser_state_t;
 
 typedef struct {
@@ -28,7 +31,7 @@ static long long thsn_atoll_checked(thsn_slice_t slice) {
         } else {
             result = c - '0';
         }
-        
+
         while (!THSN_SLICE_EMPTY(slice)) {
             c = THSN_SLICE_NEXT_CHAR_UNSAFE(slice);
             result = result * 10 + (c - '0');
@@ -41,10 +44,9 @@ static long long thsn_atoll_checked(thsn_slice_t slice) {
     return result;
 }
 
-static thsn_result_t thsn_parser_parse_value(thsn_token_t token,
-                                      thsn_slice_t token_slice,
-                                      thsn_parser_status_t* parser_status,
-                                      thsn_vector_t* result_vector) {
+static thsn_result_t thsn_parser_parse_value(
+    thsn_token_t token, thsn_slice_t token_slice,
+    thsn_parser_status_t* parser_status, thsn_vector_t* result_vector) {
     parser_status->state = THSN_PARSER_STATE_FINISH;
     switch (token) {
         case THSN_TOKEN_EOF:
@@ -67,7 +69,7 @@ static thsn_result_t thsn_parser_parse_value(thsn_token_t token,
             parser_status->state = THSN_PARSER_STATE_FIRST_ARRAY_ELEMENT;
             return THSN_RESULT_SUCCESS;
         case THSN_TOKEN_OPEN_BRACE:
-            parser_status->state = THSN_PARSER_STATE_OPEN_OBJECT;
+            parser_status->state = THSN_PARSER_STATE_FIRST_KV;
             return THSN_RESULT_SUCCESS;
         case THSN_TOKEN_UNCLOSED_STRING:
         case THSN_TOKEN_COLON:
@@ -119,6 +121,7 @@ static thsn_result_t thsn_parser_parse_next_array_element(
     thsn_parser_status_t* parser_status, thsn_vector_t* result_vector) {
     // From the top of the stack: number of element, (elements offsets)+,
     // header offset
+    (void)token_slice;
     size_t array_elements_count;
     BAIL_ON_ERROR(
         THSN_VECTOR_POP_VAR(parser_status->stack, array_elements_count));
@@ -149,15 +152,92 @@ static thsn_result_t thsn_parser_parse_next_array_element(
     if (token != THSN_TOKEN_COMMA) {
         return THSN_RESULT_INPUT_ERROR;
     }
-    ++array_elements_count;
     size_t result_offset = THSN_VECTOR_OFFSET(*result_vector);
-    thsn_parser_state_t return_to_state = THSN_PARSER_STATE_NEXT_ARRAY_ELEMENT;
     BAIL_ON_ERROR(THSN_VECTOR_PUSH_VAR(parser_status->stack, result_offset));
+    ++array_elements_count;
     BAIL_ON_ERROR(
         THSN_VECTOR_PUSH_VAR(parser_status->stack, array_elements_count));
+    thsn_parser_state_t return_to_state = THSN_PARSER_STATE_NEXT_ARRAY_ELEMENT;
     BAIL_ON_ERROR(THSN_VECTOR_PUSH_VAR(parser_status->stack, return_to_state));
-    return thsn_parser_parse_value(token, token_slice, parser_status,
-                                   result_vector);
+    parser_status->state = THSN_PARSER_STATE_VALUE;
+    return THSN_RESULT_SUCCESS;
+}
+
+static thsn_result_t thsn_parser_parse_next_kv(
+    thsn_token_t token, thsn_slice_t token_slice,
+    thsn_parser_status_t* parser_status, thsn_vector_t* result_vector) {
+    if (token != THSN_TOKEN_STRING) {
+        return THSN_RESULT_INPUT_ERROR;
+    }
+    size_t prev_node_offset;
+    BAIL_ON_ERROR(THSN_VECTOR_POP_VAR(parser_status->stack, prev_node_offset));
+    size_t cur_node_offset = THSN_VECTOR_OFFSET(*result_vector);
+    char* prev_node = THSN_VECTOR_AT_OFFSET(*result_vector, prev_node_offset);
+    memcpy(prev_node, &cur_node_offset, sizeof(cur_node_offset));
+    prev_node += sizeof(cur_node_offset);
+    memcpy(prev_node, &cur_node_offset, sizeof(cur_node_offset));
+    BAIL_ON_ERROR(THSN_VECTOR_PUSH_VAR(parser_status->stack, cur_node_offset));
+    BAIL_ON_ERROR(thsn_vector_grow(result_vector, 2 * sizeof(size_t)));
+    BAIL_ON_ERROR(thsn_vector_store_string(result_vector, token_slice));
+    parser_status->state = THSN_PARSER_STATE_KV_COLON;
+    return THSN_RESULT_SUCCESS;
+}
+
+static thsn_result_t thsn_parser_parse_first_kv(
+    thsn_token_t token, thsn_slice_t token_slice,
+    thsn_parser_status_t* parser_status, thsn_vector_t* result_vector) {
+    if (token == THSN_TOKEN_CLOSED_BRACE) {
+        parser_status->state = THSN_PARSER_STATE_FINISH;
+        return thsn_vector_store_tagged_value(
+            result_vector, THSN_TAG_MAKE(THSN_TAG_OBJECT, THSN_TAG_SIZE_EMPTY),
+            THSN_SLICE_MAKE_EMPTY());
+    }
+    size_t object_header_size = sizeof(thsn_tag_t) + 2 * sizeof(size_t);
+    size_t object_header_offset = THSN_VECTOR_OFFSET(*result_vector);
+    BAIL_ON_ERROR(thsn_vector_grow(result_vector, object_header_size));
+    char* object_header =
+        THSN_VECTOR_AT_OFFSET(*result_vector, object_header_offset);
+    thsn_tag_t object_tag =
+        THSN_TAG_MAKE(THSN_TAG_OBJECT, THSN_TAG_SIZE_INBOUND);
+    memcpy(object_header, &object_tag, sizeof(object_tag));
+    object_header_offset += sizeof(object_tag);
+    BAIL_ON_ERROR(
+        THSN_VECTOR_PUSH_VAR(parser_status->stack, object_header_offset));
+    return thsn_parser_parse_next_kv(token, token_slice, parser_status,
+                                     result_vector);
+}
+
+static thsn_result_t thsn_parser_parse_kv_colon(
+    thsn_token_t token, thsn_slice_t token_slice,
+    thsn_parser_status_t* parser_status, thsn_vector_t* result_vector) {
+    (void)token_slice;
+    (void)result_vector;
+    if (token != THSN_TOKEN_COLON) {
+        return THSN_RESULT_INPUT_ERROR;
+    }
+    thsn_parser_state_t return_to_state = THSN_PARSER_STATE_KV_END;
+    BAIL_ON_ERROR(THSN_VECTOR_PUSH_VAR(parser_status->stack, return_to_state));
+    parser_status->state = THSN_PARSER_STATE_VALUE;
+    return THSN_RESULT_SUCCESS;
+}
+
+static thsn_result_t thsn_parser_parse_kv_end(
+    thsn_token_t token, thsn_slice_t token_slice,
+    thsn_parser_status_t* parser_status, thsn_vector_t* result_vector) {
+    (void)token_slice;
+    (void)result_vector;
+    if (token == THSN_TOKEN_CLOSED_BRACE) {
+        size_t prev_node_offset;
+        BAIL_ON_ERROR(
+            THSN_VECTOR_POP_VAR(parser_status->stack, prev_node_offset));
+        parser_status->state = THSN_PARSER_STATE_FINISH;
+        return THSN_RESULT_SUCCESS;
+    }
+    if (token != THSN_TOKEN_COMMA) {
+        return THSN_RESULT_INPUT_ERROR;
+    }
+    parser_status->state = THSN_PARSER_STATE_NEXT_KV;
+    return THSN_RESULT_SUCCESS;
 }
 
 thsn_result_t thsn_parse_value(thsn_slice_t* /*in/out*/ buffer_slice,
@@ -191,7 +271,31 @@ thsn_result_t thsn_parse_value(thsn_slice_t* /*in/out*/ buffer_slice,
                         token, token_slice, &parser_status, result_vector),
                     error_cleanup);
                 break;
-            case THSN_PARSER_STATE_OPEN_OBJECT:
+            case THSN_PARSER_STATE_FIRST_KV:
+                GOTO_ON_ERROR(
+                    thsn_parser_parse_first_kv(token, token_slice,
+                                               &parser_status, result_vector),
+                    error_cleanup);
+                break;
+            case THSN_PARSER_STATE_KV_COLON:
+                GOTO_ON_ERROR(
+                    thsn_parser_parse_kv_colon(token, token_slice,
+                                               &parser_status, result_vector),
+                    error_cleanup);
+                break;
+            case THSN_PARSER_STATE_KV_END:
+                GOTO_ON_ERROR(
+                    thsn_parser_parse_kv_end(token, token_slice, &parser_status,
+                                             result_vector),
+                    error_cleanup);
+                break;
+            case THSN_PARSER_STATE_NEXT_KV:
+                GOTO_ON_ERROR(
+                    thsn_parser_parse_next_kv(token, token_slice,
+                                              &parser_status, result_vector),
+                    error_cleanup);
+                break;
+                break;
             case THSN_PARSER_STATE_FINISH:
                 goto error_cleanup;
         }

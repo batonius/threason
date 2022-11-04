@@ -95,27 +95,28 @@ typedef struct {
                 "        %s:%d: slice %s has size %zu, expected %zu.\n",    \
                 __FILE__, __LINE__, slice_name, slice.size, sizeof(bytes)); \
         fprintf(stderr, "        slice: ");                                 \
-        for (size_t i = 0; i < 60 && i < slice.size; ++i) {                 \
+        for (size_t i = 0; i < 100 && i < slice.size; ++i) {                 \
             fprintf(stderr, "%02X ", (unsigned char)slice.data[i]);              \
         }                                                                   \
         fprintf(stderr, "\n");                                              \
         fprintf(stderr, "        bytes: ");                                 \
-        for (size_t i = 0; i < 60 && i < sizeof(bytes); ++i) {              \
+        for (size_t i = 0; i < 100 && i < sizeof(bytes); ++i) {              \
             fprintf(stderr, "%02X ", (unsigned char)bytes[i]);                   \
         }                                                                   \
         fprintf(stderr, "\n");                                              \
+        break;\
     }                                                                       \
     if (memcmp(slice.data, bytes, slice.size) != 0) {                       \
         ++test_result->failed_tests;                                        \
         fprintf(stderr, "        %s:%d: slice %s differs from bytes.\n",    \
                 __FILE__, __LINE__, slice_name);                            \
         fprintf(stderr, "        slice: ");                                 \
-        for (size_t i = 0; i < 60 && i < slice.size; ++i) {                 \
+        for (size_t i = 0; i < 100 && i < slice.size; ++i) {                 \
             fprintf(stderr, "%02X ", (unsigned char)slice.data[i]);              \
         }                                                                   \
         fprintf(stderr, "\n");                                              \
         fprintf(stderr, "        bytes: ");                                 \
-        for (size_t i = 0; i < 60 && i < sizeof(bytes); ++i) {                 \
+        for (size_t i = 0; i < 100 && i < sizeof(bytes); ++i) {                 \
             fprintf(stderr, "%02X ", (unsigned char)bytes[i]);                   \
         }                                                                   \
         fprintf(stderr, "\n");                                              \

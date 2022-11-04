@@ -24,9 +24,9 @@ TEST(scalar_values) {
     END_ASSERT_BYTES();
     ASSERT_PARSE_STRING_AS_BYTES("[]") 
         0x60
-    END_ASSERT_BYTES();
-    ASSERT_PARSE_STRING_AS_BYTES("[1, [2, 3]]") 
-        0x23, 0x61, 0x62, 0x63
+    END_ASSERT_BYTES(); 
+    ASSERT_PARSE_STRING_AS_BYTES("{}") 
+        0x70
     END_ASSERT_BYTES();
 }
 

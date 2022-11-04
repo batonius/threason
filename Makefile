@@ -11,7 +11,7 @@ TEST-OBJS=$(patsubst %.c,%.o,$(TEST-SRCS))
 TEST-BINS=$(patsubst %.c,%,$(TEST-SRCS))
 
 ifdef DEBUG
-	CFLAGS+= -g -O3
+	CFLAGS+= -g -O0
 	LDFLAGS+= -g
 else
     CFLAGS+= -O3
