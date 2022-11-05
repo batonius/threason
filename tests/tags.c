@@ -3,7 +3,7 @@
 #include <string.h>
 
 TEST(stores_null) {
-	thsn_vector_t vector;
+	thsn_vector_t vector = THSN_VECTOR_INIT();
 	ASSERT_SUCCESS(thsn_vector_make(&vector, 1024));
 	ASSERT_SUCCESS(thsn_vector_store_null(&vector));
 	ASSERT_EQ(vector.offset, 1);
@@ -12,7 +12,7 @@ TEST(stores_null) {
 }
 
 TEST(stores_bools) {
-	thsn_vector_t vector;
+	thsn_vector_t vector = THSN_VECTOR_INIT();
 	ASSERT_SUCCESS(thsn_vector_make(&vector, 1024));
 	ASSERT_SUCCESS(thsn_vector_store_bool(&vector, true));
 	ASSERT_SUCCESS(thsn_vector_store_bool(&vector, false));
@@ -30,7 +30,7 @@ TEST(stores_ints) {
 	int16_t b;
 	int32_t c;
 	int64_t d;
-	thsn_vector_t vector;
+	thsn_vector_t vector = THSN_VECTOR_INIT();
 	ASSERT_SUCCESS(thsn_vector_make(&vector, 1024));
 	ASSERT_SUCCESS(thsn_vector_store_int(&vector, 123));
 	ASSERT_SUCCESS(thsn_vector_store_int(&vector, 12345));
@@ -56,7 +56,7 @@ TEST(stores_ints) {
 TEST(stores_strings) {
 	char* short_string = "a short string";
 	char* long_string = "a somewhat longer yet not very long string";
-	thsn_vector_t vector;
+	thsn_vector_t vector = THSN_VECTOR_INIT();
 	thsn_slice_t short_string_slice = THSN_SLICE_FROM_C_STR(short_string);
 	thsn_slice_t long_string_slice = THSN_SLICE_FROM_C_STR(long_string);
 	ASSERT_SUCCESS(thsn_vector_make(&vector, 1024));

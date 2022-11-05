@@ -71,12 +71,7 @@ static thsn_result_t thsn_parser_parse_value(
         case THSN_TOKEN_OPEN_BRACE:
             parser_status->state = THSN_PARSER_STATE_FIRST_KV;
             return THSN_RESULT_SUCCESS;
-        case THSN_TOKEN_UNCLOSED_STRING:
-        case THSN_TOKEN_COLON:
-        case THSN_TOKEN_COMMA:
-        case THSN_TOKEN_CLOSED_BRACKET:
-        case THSN_TOKEN_CLOSED_BRACE:
-        case THSN_TOKEN_ERROR:
+        default:
             return THSN_RESULT_INPUT_ERROR;
     }
 }

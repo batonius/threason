@@ -84,7 +84,7 @@ int main(int argc, char** argv) {
         .visit_array_end = visit_array_end,
     };
 
-    thsn_vector_t parse_result;
+    thsn_vector_t parse_result = THSN_VECTOR_INIT();
     if (thsn_vector_make(&parse_result, 1024) != THSN_RESULT_SUCCESS) {
         printf("Can't allocate parse result storage\n");
         return 1;

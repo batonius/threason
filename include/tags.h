@@ -28,7 +28,7 @@ typedef uint8_t thsn_tag_t;
 #define THSN_TAG_SIZE_NEAR_OFFSET 1
 #define THSN_TAG_SIZE_FAR_OFFSET 1
 
-#define THSN_TAG_MAKE(type, size) (((type) << 4) | ((size)&0x0f))
+#define THSN_TAG_MAKE(type, size) (thsn_tag_t)(((type) << 4) | ((size)&0x0f))
 #define THSN_TAG_TYPE(tag) ((tag) >> 4)
 #define THSN_TAG_SIZE(tag) ((tag) &0x0f)
 

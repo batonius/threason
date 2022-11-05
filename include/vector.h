@@ -13,6 +13,8 @@ typedef struct {
     size_t offset;
 } thsn_vector_t;
 
+#define THSN_VECTOR_INIT() \
+    (thsn_vector_t) { .buffer = NULL, .capacity = 0, .offset = 0 }
 #define THSN_VECTOR_SPACE_LEFT(vector) ((vector).capacity - (vector).offset)
 #define THSN_VECTOR_OFFSET(vector) ((vector).offset)
 #define THSN_VECTOR_AT_CURRENT_OFFSET(vector) \

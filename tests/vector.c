@@ -18,7 +18,7 @@ TEST(frees_vector) {
 }
 
 TEST(grows_vector) {
-	thsn_vector_t vector;
+	thsn_vector_t vector = THSN_VECTOR_INIT();
 	ASSERT_SUCCESS(thsn_vector_make(&vector, 1024));
 	ASSERT_SUCCESS(thsn_vector_grow(&vector, 1024));
 	ASSERT_EQ(vector.offset, 1024);
@@ -29,7 +29,7 @@ TEST(grows_vector) {
 }
 
 TEST(shrinks_vector) {
-	thsn_vector_t vector;
+	thsn_vector_t vector = THSN_VECTOR_INIT();
 	ASSERT_SUCCESS(thsn_vector_make(&vector, 1024));
 	ASSERT_EQ(THSN_VECTOR_SPACE_LEFT(vector), 1024);
 	ASSERT_SUCCESS(thsn_vector_grow(&vector, 24));
@@ -40,7 +40,7 @@ TEST(shrinks_vector) {
 }
 
 TEST(pushes_and_pops) {
-	thsn_vector_t vector;
+	thsn_vector_t vector = THSN_VECTOR_INIT();
 	uint64_t a = 1;
 	uint32_t b = 2;
 	uint16_t c = 3;

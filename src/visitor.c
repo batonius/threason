@@ -59,7 +59,7 @@ thsn_result_t thsn_visit(thsn_slice_t parse_result,
         .last = false,
     };
 
-    thsn_vector_t stack;
+    thsn_vector_t stack = THSN_VECTOR_INIT();
     bool skip = false;
     size_t next_offset = 0;
     bool done_visiting = false;

@@ -3,7 +3,7 @@
 
 #define ASSERT_PARSE_STRING_AS_BYTES(string) \
 	do { \
-	thsn_vector_t result_vector; \
+	thsn_vector_t result_vector = THSN_VECTOR_INIT(); \
 	ASSERT_SUCCESS(thsn_vector_make(&result_vector, 1024)); \
 	thsn_slice_t input_slice = THSN_SLICE_FROM_C_STR((string)); \
 	ASSERT_SUCCESS(thsn_parse_value(&input_slice, &result_vector)); \
