@@ -13,7 +13,6 @@ typedef enum {
 } thsn_visitor_result_t;
 
 typedef struct {
-    size_t depth;
     thsn_slice_t key;
     bool in_array;
     bool last;
