@@ -309,6 +309,7 @@ thsn_result_t thsn_parse_value(thsn_slice_t* /*in/out*/ buffer_slice,
         }
     }
 
+    thsn_vector_free(&parser_status.stack);
     return THSN_RESULT_SUCCESS;
 error_cleanup:
     thsn_vector_free(&parser_status.stack);

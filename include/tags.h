@@ -22,10 +22,6 @@ typedef uint8_t thsn_tag_t;
 #define THSN_TAG_SIZE_TRUE 1
 #define THSN_TAG_SIZE_EMPTY 0
 #define THSN_TAG_SIZE_ZERO 0
-#define THSN_TAG_SIZE_INT8 1
-#define THSN_TAG_SIZE_INT16 2
-#define THSN_TAG_SIZE_INT32 4
-#define THSN_TAG_SIZE_INT64 8
 #define THSN_TAG_SIZE_F64 0
 #define THSN_TAG_SIZE_MAX 0xf
 #define THSN_TAG_SIZE_INBOUND 1
@@ -33,6 +29,8 @@ typedef uint8_t thsn_tag_t;
 #define THSN_TAG_SIZE_FAR_OFFSET 1
 
 #define THSN_TAG_MAKE(type, size) (((type) << 4) | ((size)&0x0f))
+#define THSN_TAG_TYPE(tag) ((tag) >> 4)
+#define THSN_TAG_SIZE(tag) ((tag) &0x0f)
 
 thsn_result_t thsn_vector_store_tagged_value(thsn_vector_t* /*in/out*/ vector,
                                              thsn_tag_t tag,

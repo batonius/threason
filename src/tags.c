@@ -49,23 +49,23 @@ thsn_result_t thsn_vector_store_int(thsn_vector_t* /*in/out*/ vector,
     if (value <= INT8_MAX && value >= INT8_MIN) {
         const int8_t int8_value = (int8_t)value;
         return thsn_vector_store_tagged_value(
-            vector, THSN_TAG_MAKE(THSN_TAG_INT, THSN_TAG_SIZE_INT8),
+            vector, THSN_TAG_MAKE(THSN_TAG_INT, sizeof(int8_t)),
             THSN_SLICE_FROM_VAR(int8_value));
     }
     if (value <= INT16_MAX && value >= INT16_MIN) {
         const int16_t int16_value = (int16_t)value;
         return thsn_vector_store_tagged_value(
-            vector, THSN_TAG_MAKE(THSN_TAG_INT, THSN_TAG_SIZE_INT16),
+            vector, THSN_TAG_MAKE(THSN_TAG_INT, sizeof(int16_t)),
             THSN_SLICE_FROM_VAR(int16_value));
     }
     if (value <= INT32_MAX && value >= INT32_MIN) {
         const int32_t int32_value = (int32_t)value;
         return thsn_vector_store_tagged_value(
-            vector, THSN_TAG_MAKE(THSN_TAG_INT, THSN_TAG_SIZE_INT32),
+            vector, THSN_TAG_MAKE(THSN_TAG_INT, sizeof(int32_t)),
             THSN_SLICE_FROM_VAR(int32_value));
     }
     return thsn_vector_store_tagged_value(
-        vector, THSN_TAG_MAKE(THSN_TAG_INT, THSN_TAG_SIZE_INT64),
+        vector, THSN_TAG_MAKE(THSN_TAG_INT, sizeof(long long)),
         THSN_SLICE_FROM_VAR(value));
 }
 

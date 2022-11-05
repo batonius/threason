@@ -2,6 +2,8 @@
 
 #include <stdlib.h>
 
+#include "result.h"
+
 typedef struct {
     size_t size;
     char* data;
@@ -30,3 +32,4 @@ typedef struct {
 
 #define THSN_SLICE_NEXT_CHAR_UNSAFE(slice) \
     (--(slice).size, *(slice).data++)
+
