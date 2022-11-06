@@ -1,2 +1,4 @@
 build
 httpd
+*.json
+perf.data*
