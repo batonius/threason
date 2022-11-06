@@ -4,8 +4,16 @@
 
 typedef enum {
     THSN_VISIT_TAG_ARRAY,
-    THSN_VISIT_TAG_OBJECT,
+    THSN_VISIT_TAG_OBJECT_NODE,
+    THSN_VISIT_TAG_OBJECT_KV,
+    THSN_VISIT_TAG_OBJECT_END,
 } thsn_visit_tag_t;
+
+static const thsn_visit_tag_t VISIT_TAG_ARRAY = THSN_VISIT_TAG_ARRAY;
+static const thsn_visit_tag_t VISIT_TAG_OBJECT_NODE =
+    THSN_VISIT_TAG_OBJECT_NODE;
+static const thsn_visit_tag_t VISIT_TAG_OBJECT_KV = THSN_VISIT_TAG_OBJECT_KV;
+static const thsn_visit_tag_t VISIT_TAG_OBJECT_END = THSN_VISIT_TAG_OBJECT_END;
 
 thsn_result_t thsn_visit(thsn_slice_t parse_result,
                          thsn_visitor_vtable_t* vtable, void* user_data) {
@@ -169,12 +177,32 @@ thsn_result_t thsn_visit(thsn_slice_t parse_result,
                               error_cleanup);
                 GOTO_ON_ERROR(THSN_VECTOR_PUSH_VAR(stack, context),
                               error_cleanup);
-                thsn_visit_tag_t array_tag = THSN_VISIT_TAG_ARRAY;
-                GOTO_ON_ERROR(THSN_VECTOR_PUSH_VAR(stack, array_tag),
+                GOTO_ON_ERROR(THSN_VECTOR_PUSH_VAR(stack, VISIT_TAG_ARRAY),
                               error_cleanup);
-            }
-            case THSN_TAG_OBJECT:
                 break;
+            }
+            case THSN_TAG_OBJECT: {
+                CALL_VISITOR2(vtable->visit_object_start, &context, user_data);
+                if (skip) {
+                    break;
+                }
+                size_t node_offset = 0;
+                if (THSN_TAG_SIZE(tag) != THSN_TAG_SIZE_EMPTY) {
+                    READ_SLICE_INTO_VAR(data_slice, node_offset);
+                }
+                GOTO_ON_ERROR(THSN_VECTOR_PUSH_VAR(stack, context),
+                              error_cleanup);
+                GOTO_ON_ERROR(THSN_VECTOR_PUSH_VAR(stack, VISIT_TAG_OBJECT_END),
+                              error_cleanup);
+                if (node_offset != 0) {
+                    GOTO_ON_ERROR(THSN_VECTOR_PUSH_VAR(stack, node_offset),
+                                  error_cleanup);
+                    GOTO_ON_ERROR(
+                        THSN_VECTOR_PUSH_VAR(stack, VISIT_TAG_OBJECT_NODE),
+                        error_cleanup);
+                }
+                break;
+            }
         }
 
         bool found_offset = false;
@@ -186,9 +214,10 @@ thsn_result_t thsn_visit(thsn_slice_t parse_result,
             thsn_visit_tag_t next_visit_tag;
             GOTO_ON_ERROR(THSN_VECTOR_POP_VAR(stack, next_visit_tag),
                           error_cleanup);
-            GOTO_ON_ERROR(THSN_VECTOR_POP_VAR(stack, context), error_cleanup);
             switch (next_visit_tag) {
                 case THSN_VISIT_TAG_ARRAY: {
+                    GOTO_ON_ERROR(THSN_VECTOR_POP_VAR(stack, context),
+                                  error_cleanup);
                     size_t elements_count;
                     GOTO_ON_ERROR(THSN_VECTOR_POP_VAR(stack, elements_count),
                                   error_cleanup);
@@ -205,18 +234,122 @@ thsn_result_t thsn_visit(thsn_slice_t parse_result,
                                   error_cleanup);
                     GOTO_ON_ERROR(THSN_VECTOR_PUSH_VAR(stack, context),
                                   error_cleanup);
-                    thsn_visit_tag_t array_tag = THSN_VISIT_TAG_ARRAY;
-                    GOTO_ON_ERROR(THSN_VECTOR_PUSH_VAR(stack, array_tag),
+                    GOTO_ON_ERROR(THSN_VECTOR_PUSH_VAR(stack, VISIT_TAG_ARRAY),
                                   error_cleanup);
                     next_offset = element_offset;
+                    context.in_object = false;
                     context.in_array = true;
                     context.last = elements_count == 0;
                     context.key = THSN_SLICE_MAKE_EMPTY();
                     found_offset = true;
                     break;
                 }
-                case THSN_VISIT_TAG_OBJECT:
+                case THSN_VISIT_TAG_OBJECT_NODE: {
+                    size_t object_offset;
+                    GOTO_ON_ERROR(THSN_VECTOR_POP_VAR(stack, object_offset),
+                                  error_cleanup);
+                    thsn_slice_t node_slice;
+                    GOTO_ON_ERROR(thsn_slice_at_offset(
+                                      parse_result, object_offset, &node_slice),
+                                  error_cleanup);
+                    if (node_slice.size < 2 * sizeof(size_t)) {
+                        goto error_cleanup;
+                    }
+                    size_t left_child_offset;
+                    memcpy(&left_child_offset, node_slice.data,
+                           sizeof(left_child_offset));
+                    size_t right_child_offset;
+                    memcpy(&right_child_offset,
+                           node_slice.data + sizeof(size_t),
+                           sizeof(right_child_offset));
+                    if (right_child_offset != 0 &&
+                        right_child_offset != left_child_offset) {
+                        GOTO_ON_ERROR(
+                            THSN_VECTOR_PUSH_VAR(stack, right_child_offset),
+                            error_cleanup);
+                        GOTO_ON_ERROR(
+                            THSN_VECTOR_PUSH_VAR(stack, VISIT_TAG_OBJECT_NODE),
+                            error_cleanup);
+                    }
+                    object_offset += 2 * sizeof(size_t);
+                    GOTO_ON_ERROR(THSN_VECTOR_PUSH_VAR(stack, object_offset),
+                                  error_cleanup);
+                    GOTO_ON_ERROR(
+                        THSN_VECTOR_PUSH_VAR(stack, VISIT_TAG_OBJECT_KV),
+                        error_cleanup);
+                    if (left_child_offset != 0) {
+                        GOTO_ON_ERROR(
+                            THSN_VECTOR_PUSH_VAR(stack, left_child_offset),
+                            error_cleanup);
+                        GOTO_ON_ERROR(
+                            THSN_VECTOR_PUSH_VAR(stack, VISIT_TAG_OBJECT_NODE),
+                            error_cleanup);
+                    }
                     break;
+                }
+                case THSN_VISIT_TAG_OBJECT_KV: {
+                    size_t kv_offset;
+                    GOTO_ON_ERROR(THSN_VECTOR_POP_VAR(stack, kv_offset),
+                                  error_cleanup);
+                    thsn_slice_t kv_slice;
+                    GOTO_ON_ERROR(thsn_slice_at_offset(parse_result, kv_offset,
+                                                       &kv_slice),
+                                  error_cleanup);
+                    if (THSN_SLICE_EMPTY(kv_slice)) {
+                        goto error_cleanup;
+                    }
+                    char key_str_tag = THSN_SLICE_NEXT_CHAR_UNSAFE(kv_slice);
+                    thsn_slice_t key_slice = THSN_SLICE_MAKE_EMPTY();
+                    size_t value_offset = 0;
+                    switch (THSN_TAG_TYPE(key_str_tag)) {
+                        case THSN_TAG_REF_STRING:
+                            if (THSN_TAG_SIZE(key_str_tag) !=
+                                THSN_TAG_SIZE_EMPTY) {
+                                READ_SLICE_INTO_VAR(kv_slice, key_slice);
+                            }
+                            value_offset = kv_offset + sizeof(thsn_tag_t) +
+                                           sizeof(key_slice);
+                            break;
+                        case THSN_TAG_SMALL_STRING: {
+                            size_t key_str_size = THSN_TAG_SIZE(key_str_tag);
+                            if (kv_slice.size < key_str_size) {
+                                goto error_cleanup;
+                            }
+                            key_slice =
+                                THSN_SLICE_MAKE(kv_slice.data, key_str_size);
+                            value_offset =
+                                kv_offset + sizeof(thsn_tag_t) + key_str_size;
+                            break;
+                        }
+                        default:
+                            goto error_cleanup;
+                    }
+                    next_offset = value_offset;
+                    context.in_array = false;
+                    context.last = false;
+                    if (THSN_VECTOR_OFFSET(stack) >= sizeof(thsn_visit_tag_t)) {
+                        thsn_visit_tag_t next_tag;
+                        memcpy(&next_tag,
+                               THSN_VECTOR_AT_OFFSET(
+                                   stack, THSN_VECTOR_OFFSET(stack) -
+                                              sizeof(thsn_visit_tag_t)),
+                               sizeof(thsn_visit_tag_t));
+                        if (next_tag == THSN_VISIT_TAG_OBJECT_END) {
+                            context.last = true;
+                        }
+                    }
+                    context.key = key_slice;
+                    context.in_object = true;
+                    found_offset = true;
+                    break;
+                }
+                case THSN_VISIT_TAG_OBJECT_END: {
+                    GOTO_ON_ERROR(THSN_VECTOR_POP_VAR(stack, context),
+                                  error_cleanup);
+                    CALL_VISITOR2(vtable->visit_object_end, &context,
+                                  user_data);
+                    break;
+                }
             }
         } while (!done_visiting && !found_offset);
     } while (!done_visiting);

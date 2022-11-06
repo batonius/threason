@@ -173,6 +173,8 @@ static thsn_result_t thsn_parser_parse_next_kv(
     memcpy(prev_node, &cur_node_offset, sizeof(cur_node_offset));
     BAIL_ON_ERROR(THSN_VECTOR_PUSH_VAR(parser_status->stack, cur_node_offset));
     BAIL_ON_ERROR(thsn_vector_grow(result_vector, 2 * sizeof(size_t)));
+    memset(THSN_VECTOR_AT_CURRENT_OFFSET(*result_vector) - 2 * sizeof(size_t),
+           0, 2 * sizeof(size_t));
     BAIL_ON_ERROR(thsn_vector_store_string(result_vector, token_slice));
     parser_status->state = THSN_PARSER_STATE_KV_COLON;
     return THSN_RESULT_SUCCESS;

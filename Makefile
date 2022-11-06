@@ -24,6 +24,16 @@ else
 	LDFLAGS+= -s
 endif
 
+ifdef ANSAN
+	CFLAGS+= -fsanitize=address
+	LDFLAGS+= -fsanitize=address
+endif
+
+ifdef UBSAN
+	CFLAGS+= -fsanitize=undefined
+	LDFLAGS+= -fsanitize=undefined
+endif
+
 all: tests
 
 $(BUILD-DIR):

@@ -98,7 +98,7 @@ thsn_result_t thsn_next_token(thsn_slice_t* /*in/out*/ buffer_slice,
                 // buffer_slice->data + bufer_slice.size - 1
                 size_t i = 1;
                 while (closing_quotes - i >= buffer_slice->data &&
-                       closing_quotes[-i] == '\\') {
+                       *(closing_quotes - i) == '\\') {
                     ++i;
                 }
                 if (i % 2 == 1) {

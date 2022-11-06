@@ -15,6 +15,7 @@ typedef enum {
 typedef struct {
     thsn_slice_t key;
     bool in_array;
+    bool in_object;
     bool last;
 } thsn_visitor_context_t;
 
