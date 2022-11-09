@@ -1,7 +1,7 @@
 #include "tokenizer.h"
 
-ThsnResult thsn_next_token(ThsnSlice* /*in/out*/ buffer_slice,
-                           ThsnSlice* /*out*/ token_slice,
+ThsnResult thsn_next_token(ThsnSlice* restrict /*in/out*/ buffer_slice,
+                           ThsnSlice* restrict /*out*/ token_slice,
                            ThsnToken* /*out*/ token) {
     BAIL_ON_NULL_INPUT(buffer_slice);
     BAIL_ON_NULL_INPUT(buffer_slice->data);

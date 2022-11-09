@@ -74,9 +74,9 @@ ThsnResult thsn_visit(ThsnSlice parse_result, ThsnVisitorVTable* vtable,
 
     do {
         ThsnSlice data_slice;
-        GOTO_ON_ERROR(
-            thsn_slice_at_offset(parse_result, next_offset, &data_slice),
-            error_cleanup);
+        GOTO_ON_ERROR(thsn_slice_at_offset(parse_result, next_offset,
+                                           sizeof(char), &data_slice),
+                      error_cleanup);
 
         char tag = THSN_SLICE_NEXT_CHAR_UNSAFE(data_slice);
         switch (THSN_TAG_TYPE(tag)) {
@@ -153,14 +153,11 @@ ThsnResult thsn_visit(ThsnSlice parse_result, ThsnVisitorVTable* vtable,
                     READ_SLICE_INTO_VAR(data_slice, elements_count);
                     READ_SLICE_INTO_VAR(data_slice, elements_table_offset);
                     ThsnSlice elements_table_slice;
-                    GOTO_ON_ERROR(thsn_slice_at_offset(parse_result,
-                                                       elements_table_offset,
-                                                       &elements_table_slice),
+                    GOTO_ON_ERROR(thsn_slice_at_offset(
+                                      parse_result, elements_table_offset,
+                                      elements_count * sizeof(size_t),
+                                      &elements_table_slice),
                                   error_cleanup);
-                    if (elements_table_slice.size <
-                        elements_count * sizeof(size_t)) {
-                        goto error_cleanup;
-                    }
                     for (size_t i = 0; i < elements_count; ++i) {
                         size_t element_offset;
                         memcpy(&element_offset,
@@ -248,12 +245,10 @@ ThsnResult thsn_visit(ThsnSlice parse_result, ThsnVisitorVTable* vtable,
                     GOTO_ON_ERROR(THSN_VECTOR_POP_VAR(stack, object_offset),
                                   error_cleanup);
                     ThsnSlice node_slice;
-                    GOTO_ON_ERROR(thsn_slice_at_offset(
-                                      parse_result, object_offset, &node_slice),
-                                  error_cleanup);
-                    if (node_slice.size < 2 * sizeof(size_t)) {
-                        goto error_cleanup;
-                    }
+                    GOTO_ON_ERROR(
+                        thsn_slice_at_offset(parse_result, object_offset,
+                                             2 * sizeof(size_t), &node_slice),
+                        error_cleanup);
                     size_t left_child_offset;
                     memcpy(&left_child_offset, node_slice.data,
                            sizeof(left_child_offset));
@@ -292,11 +287,8 @@ ThsnResult thsn_visit(ThsnSlice parse_result, ThsnVisitorVTable* vtable,
                                   error_cleanup);
                     ThsnSlice kv_slice;
                     GOTO_ON_ERROR(thsn_slice_at_offset(parse_result, kv_offset,
-                                                       &kv_slice),
+                                                       sizeof(char), &kv_slice),
                                   error_cleanup);
-                    if (THSN_SLICE_EMPTY(kv_slice)) {
-                        goto error_cleanup;
-                    }
                     char key_str_tag = THSN_SLICE_NEXT_CHAR_UNSAFE(kv_slice);
                     ThsnSlice key_slice = THSN_SLICE_MAKE_EMPTY();
                     size_t value_offset = 0;

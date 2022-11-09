@@ -29,13 +29,12 @@ typedef struct {
 
 #define THSN_SLICE_EMPTY(slice) ((slice).size == 0)
 
-#define THSN_SLICE_CURRENT_CHAR(slice) (*(slice).data)
-
 #define THSN_SLICE_NEXT_CHAR_UNSAFE(slice) (--(slice).size, *(slice).data++)
 
 inline ThsnResult thsn_slice_at_offset(ThsnSlice base_slice, size_t offset,
+                                       size_t min_size,
                                        ThsnSlice* slice_at_offset) {
-    if (offset >= base_slice.size) {
+    if (offset >= base_slice.size || (base_slice.size - offset) < min_size) {
         return THSN_RESULT_INPUT_ERROR;
     }
     *slice_at_offset =
