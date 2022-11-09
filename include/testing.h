@@ -10,23 +10,23 @@ typedef struct {
     const char* test_name;
     size_t total_tests;
     size_t failed_tests;
-} test_result_t;
+} TestResult;
 
 typedef struct {
     const char* bench_name;
     struct timespec elapsed;
     size_t iterations;
-} bench_result_t;
+} BenchResult;
 
-#define TEST(name)                                                         \
-    void test_function_##name(test_result_t* test_result);                 \
-    test_result_t name() {                                                 \
-        test_result_t test_result = {.total_tests = 0, .failed_tests = 0}; \
-        test_result.test_name = #name;                                     \
-        test_function_##name(&test_result);                                \
-        return test_result;                                                \
-    }                                                                      \
-    void test_function_##name(test_result_t* test_result)
+#define TEST(name)                                                      \
+    void test_function_##name(TestResult* test_result);                 \
+    TestResult name() {                                                 \
+        TestResult test_result = {.total_tests = 0, .failed_tests = 0}; \
+        test_result.test_name = #name;                                  \
+        test_function_##name(&test_result);                             \
+        return test_result;                                             \
+    }                                                                   \
+    void test_function_##name(TestResult* test_result)
 
 #define ASSERT_EQ(A, B)                                                        \
     do {                                                                       \
@@ -83,7 +83,7 @@ typedef struct {
 #define ASSERT_SLICE_EQ_BYTES(slice_)     \
     do {                                  \
         ++test_result->total_tests;       \
-        thsn_slice_t slice = slice_;      \
+        ThsnSlice slice = slice_;         \
         const char* slice_name = #slice_; \
     char bytes[] = {
 #define END_BYTES()                                                         \
@@ -95,46 +95,46 @@ typedef struct {
                 "        %s:%d: slice %s has size %zu, expected %zu.\n",    \
                 __FILE__, __LINE__, slice_name, slice.size, sizeof(bytes)); \
         fprintf(stderr, "        slice: ");                                 \
-        for (size_t i = 0; i < 100 && i < slice.size; ++i) {                 \
-            fprintf(stderr, "%02X ", (unsigned char)slice.data[i]);              \
+        for (size_t i = 0; i < 100 && i < slice.size; ++i) {                \
+            fprintf(stderr, "%02X ", (unsigned char)slice.data[i]);         \
         }                                                                   \
         fprintf(stderr, "\n");                                              \
         fprintf(stderr, "        bytes: ");                                 \
-        for (size_t i = 0; i < 100 && i < sizeof(bytes); ++i) {              \
-            fprintf(stderr, "%02X ", (unsigned char)bytes[i]);                   \
+        for (size_t i = 0; i < 100 && i < sizeof(bytes); ++i) {             \
+            fprintf(stderr, "%02X ", (unsigned char)bytes[i]);              \
         }                                                                   \
         fprintf(stderr, "\n");                                              \
-        break;\
+        break;                                                              \
     }                                                                       \
     if (memcmp(slice.data, bytes, slice.size) != 0) {                       \
         ++test_result->failed_tests;                                        \
         fprintf(stderr, "        %s:%d: slice %s differs from bytes.\n",    \
                 __FILE__, __LINE__, slice_name);                            \
         fprintf(stderr, "        slice: ");                                 \
-        for (size_t i = 0; i < 100 && i < slice.size; ++i) {                 \
-            fprintf(stderr, "%02X ", (unsigned char)slice.data[i]);              \
+        for (size_t i = 0; i < 100 && i < slice.size; ++i) {                \
+            fprintf(stderr, "%02X ", (unsigned char)slice.data[i]);         \
         }                                                                   \
         fprintf(stderr, "\n");                                              \
         fprintf(stderr, "        bytes: ");                                 \
-        for (size_t i = 0; i < 100 && i < sizeof(bytes); ++i) {                 \
-            fprintf(stderr, "%02X ", (unsigned char)bytes[i]);                   \
+        for (size_t i = 0; i < 100 && i < sizeof(bytes); ++i) {             \
+            fprintf(stderr, "%02X ", (unsigned char)bytes[i]);              \
         }                                                                   \
         fprintf(stderr, "\n");                                              \
     }                                                                       \
     }                                                                       \
     while (0)
 
-#define TEST_SUITE(name)                                                     \
-    {                                                                        \
-        printf("Testing %s:\n", name);                                       \
-        test_result_t suite_results = {.total_tests = 0, .failed_tests = 0}; \
-        test_result_t (*__test_functions[])() = {
+#define TEST_SUITE(name)                                                  \
+    {                                                                     \
+        printf("Testing %s:\n", name);                                    \
+        TestResult suite_results = {.total_tests = 0, .failed_tests = 0}; \
+        TestResult (*__test_functions[])() = {
 #define END_TEST_SUITE()                                                     \
     }                                                                        \
     ;                                                                        \
     for (size_t i = 0;                                                       \
          i < sizeof(__test_functions) / sizeof(*__test_functions); ++i) {    \
-        const test_result_t test_result = __test_functions[i]();             \
+        const TestResult test_result = __test_functions[i]();                \
         printf("    %s: %zd/%zd\n", test_result.test_name,                   \
                test_result.total_tests - test_result.failed_tests,           \
                test_result.total_tests);                                     \
@@ -152,7 +152,7 @@ typedef struct {
     int main(int argc, char** argv) { \
         (void)argc;                   \
         (void)argv;                   \
-        test_result_t final_results = {.total_tests = 0, .failed_tests = 0};
+        TestResult final_results = {.total_tests = 0, .failed_tests = 0};
 
 #define END_MAIN()                                                           \
     printf("Total assertions %zd, failed %zd.\n", final_results.total_tests, \
@@ -160,11 +160,11 @@ typedef struct {
     return final_results.failed_tests > 0 ? 1 : 0;                           \
     }
 
-#define BENCH(name)                                                        \
-    static bench_result_t name() {                                         \
-        bench_result_t __result = {.elapsed = {.tv_sec = 0, .tv_nsec = 0}, \
-                                   .iterations = 0,                        \
-                                   .bench_name = #name};
+#define BENCH(name)                                                     \
+    static BenchResult name() {                                         \
+        BenchResult __result = {.elapsed = {.tv_sec = 0, .tv_nsec = 0}, \
+                                .iterations = 0,                        \
+                                .bench_name = #name};
 
 #define BENCH_MEASURE(iters)                              \
     size_t __iters = (iters);                             \
@@ -218,13 +218,13 @@ typedef struct {
 #define BENCH_SUITE(name)                   \
     {                                       \
         printf("Benchmarking %s:\n", name); \
-        bench_result_t (*__bench_functions[])() = {
+        BenchResult (*__bench_functions[])() = {
 #define END_BENCH_SUITE()                                                   \
     }                                                                       \
     ;                                                                       \
     for (size_t i = 0;                                                      \
          i < sizeof(__bench_functions) / sizeof(*__bench_functions); ++i) { \
-        const bench_result_t bench_result = __bench_functions[i]();         \
+        const BenchResult bench_result = __bench_functions[i]();            \
         uint64_t elapsed_nsec = bench_result.elapsed.tv_sec * 1000000000 +  \
                                 bench_result.elapsed.tv_nsec;               \
         uint64_t elapsed_nsec_per_iter =                                    \

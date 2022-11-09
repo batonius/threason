@@ -11,10 +11,10 @@ typedef struct {
     char* buffer;
     size_t capacity;
     size_t offset;
-} thsn_vector_t;
+} ThsnVector;
 
 #define THSN_VECTOR_INIT() \
-    (thsn_vector_t) { .buffer = NULL, .capacity = 0, .offset = 0 }
+    (ThsnVector) { .buffer = NULL, .capacity = 0, .offset = 0 }
 #define THSN_VECTOR_SPACE_LEFT(vector) ((vector).capacity - (vector).offset)
 #define THSN_VECTOR_OFFSET(vector) ((vector).offset)
 #define THSN_VECTOR_AT_CURRENT_OFFSET(vector) \
@@ -24,26 +24,24 @@ typedef struct {
 #define THSN_VECTOR_AS_SLICE(vector) \
     THSN_SLICE_MAKE((vector).buffer, (vector).offset)
 
-thsn_result_t thsn_vector_make(thsn_vector_t* /*out*/ vector,
-                               size_t prealloc_size);
+ThsnResult thsn_vector_make(ThsnVector* /*out*/ vector, size_t prealloc_size);
 
-thsn_result_t thsn_vector_free(thsn_vector_t* /*in/out*/ vector);
+ThsnResult thsn_vector_free(ThsnVector* /*in/out*/ vector);
 
 /* Invalidates all the pointers within the vector */
-thsn_result_t thsn_vector_grow(thsn_vector_t* /*in/out*/ vector,
-                               size_t data_size);
+ThsnResult thsn_vector_grow(ThsnVector* /*in/out*/ vector, size_t data_size);
 
-thsn_result_t thsn_vector_shrink(thsn_vector_t* /*in/out*/ vector,
-                                 size_t shrink_size);
+ThsnResult thsn_vector_shrink(ThsnVector* /*in/out*/ vector,
+                              size_t shrink_size);
 
-thsn_result_t thsn_vector_push(thsn_vector_t* /*in/out*/ vector,
-                               thsn_slice_t /*in*/ slice);
+ThsnResult thsn_vector_push(ThsnVector* /*in/out*/ vector,
+                            ThsnSlice /*in*/ slice);
 
 #define THSN_VECTOR_PUSH_VAR(vector, var) \
     thsn_vector_push(&(vector), THSN_SLICE_FROM_VAR(var))
 
-thsn_result_t thsn_vector_pop(thsn_vector_t* /*in/out*/ vector,
-                              thsn_slice_t /*out*/ slice);
+ThsnResult thsn_vector_pop(ThsnVector* /*in/out*/ vector,
+                           ThsnSlice /*out*/ slice);
 
 #define THSN_VECTOR_POP_VAR(vector, var) \
     thsn_vector_pop(&(vector), THSN_SLICE_FROM_VAR(var))

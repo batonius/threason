@@ -7,19 +7,19 @@
 typedef struct {
     size_t size;
     char* data;
-} thsn_slice_t;
+} ThsnSlice;
 
 #define THSN_SLICE_MAKE_EMPTY() \
-    (thsn_slice_t) { .data = NULL, .size = 0 }
+    (ThsnSlice) { .data = NULL, .size = 0 }
 
 #define THSN_SLICE_MAKE(data_, size_) \
-    (thsn_slice_t) { .data = (data_), .size = (size_) }
+    (ThsnSlice) { .data = (data_), .size = (size_) }
 
 #define THSN_SLICE_FROM_VAR(v) \
-    (thsn_slice_t) { .data = (char*)&(v), .size = sizeof(v) }
+    (ThsnSlice) { .data = (char*)&(v), .size = sizeof(v) }
 
 #define THSN_SLICE_FROM_C_STR(s) \
-    (thsn_slice_t) { .data = (s), .size = strlen((s)) }
+    (ThsnSlice) { .data = (s), .size = strlen((s)) }
 
 #define THSN_SLICE_ADVANCE_UNSAFE(slice, n) \
     do {                                    \
@@ -33,5 +33,12 @@ typedef struct {
 
 #define THSN_SLICE_NEXT_CHAR_UNSAFE(slice) (--(slice).size, *(slice).data++)
 
-thsn_result_t thsn_slice_at_offset(thsn_slice_t base_slice, size_t offset,
-                                   thsn_slice_t* slice_at_offset);
+inline ThsnResult thsn_slice_at_offset(ThsnSlice base_slice, size_t offset,
+                                       ThsnSlice* slice_at_offset) {
+    if (offset >= base_slice.size) {
+        return THSN_RESULT_INPUT_ERROR;
+    }
+    *slice_at_offset =
+        THSN_SLICE_MAKE(base_slice.data + offset, base_slice.size - offset);
+    return THSN_RESULT_SUCCESS;
+}

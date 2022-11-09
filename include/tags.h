@@ -14,9 +14,9 @@ typedef enum {
     THSN_TAG_DOUBLE,
     THSN_TAG_ARRAY,
     THSN_TAG_OBJECT,
-} thsn_tag_type_t;
+} ThsnTagType;
 
-typedef uint8_t thsn_tag_t;
+typedef uint8_t ThsnTag;
 
 #define THSN_TAG_SIZE_FALSE 0
 #define THSN_TAG_SIZE_TRUE 1
@@ -28,24 +28,22 @@ typedef uint8_t thsn_tag_t;
 #define THSN_TAG_SIZE_NEAR_OFFSET 1
 #define THSN_TAG_SIZE_FAR_OFFSET 1
 
-#define THSN_TAG_MAKE(type, size) (thsn_tag_t)(((type) << 4) | ((size)&0x0f))
+#define THSN_TAG_MAKE(type, size) (ThsnTag)(((type) << 4) | ((size)&0x0f))
 #define THSN_TAG_TYPE(tag) ((tag) >> 4)
-#define THSN_TAG_SIZE(tag) ((tag) &0x0f)
+#define THSN_TAG_SIZE(tag) ((tag)&0x0f)
 
-thsn_result_t thsn_vector_store_tagged_value(thsn_vector_t* /*in/out*/ vector,
-                                             thsn_tag_t tag,
-                                             thsn_slice_t value_slice);
+ThsnResult thsn_vector_store_tagged_value(ThsnVector* /*in/out*/ vector,
+                                          ThsnTag tag, ThsnSlice value_slice);
 
-thsn_result_t thsn_vector_store_null(thsn_vector_t* /*in/out*/ vector);
+ThsnResult thsn_vector_store_null(ThsnVector* /*in/out*/ vector);
 
-thsn_result_t thsn_vector_store_bool(thsn_vector_t* /*in/out*/ vector,
-                                     bool value);
+ThsnResult thsn_vector_store_bool(ThsnVector* /*in/out*/ vector, bool value);
 
-thsn_result_t thsn_vector_store_double(thsn_vector_t* /*in/out*/ vector,
-                                       double value);
+ThsnResult thsn_vector_store_double(ThsnVector* /*in/out*/ vector,
+                                    double value);
 
-thsn_result_t thsn_vector_store_int(thsn_vector_t* /*in/out*/ vector,
-                                    long long value);
+ThsnResult thsn_vector_store_int(ThsnVector* /*in/out*/ vector,
+                                 long long value);
 
-thsn_result_t thsn_vector_store_string(thsn_vector_t* /*in/out*/ vector,
-                                       thsn_slice_t string_slice);
+ThsnResult thsn_vector_store_string(ThsnVector* /*in/out*/ vector,
+                                    ThsnSlice string_slice);

@@ -1,7 +1,6 @@
 #include "vector.h"
 
-thsn_result_t thsn_vector_make(thsn_vector_t* /*out*/ vector,
-                               size_t prealloc_size) {
+ThsnResult thsn_vector_make(ThsnVector* /*out*/ vector, size_t prealloc_size) {
     BAIL_ON_NULL_INPUT(vector);
     vector->buffer = malloc(prealloc_size);
     BAIL_ON_ALLOC_FAILURE(vector->buffer);
@@ -10,7 +9,7 @@ thsn_result_t thsn_vector_make(thsn_vector_t* /*out*/ vector,
     return THSN_RESULT_SUCCESS;
 }
 
-thsn_result_t thsn_vector_free(thsn_vector_t* /*in/out*/ vector) {
+ThsnResult thsn_vector_free(ThsnVector* /*in/out*/ vector) {
     BAIL_ON_NULL_INPUT(vector);
     if (vector->buffer != NULL) {
         free(vector->buffer);
@@ -22,8 +21,7 @@ thsn_result_t thsn_vector_free(thsn_vector_t* /*in/out*/ vector) {
 }
 
 /* Invalidates all the pointers within the vector */
-thsn_result_t thsn_vector_grow(thsn_vector_t* /*in/out*/ vector,
-                               size_t data_size) {
+ThsnResult thsn_vector_grow(ThsnVector* /*in/out*/ vector, size_t data_size) {
     BAIL_ON_NULL_INPUT(vector);
     const size_t allocated_space_left = THSN_VECTOR_SPACE_LEFT(*vector);
     if (allocated_space_left < data_size) {
@@ -43,8 +41,8 @@ thsn_result_t thsn_vector_grow(thsn_vector_t* /*in/out*/ vector,
     return THSN_RESULT_SUCCESS;
 }
 
-thsn_result_t thsn_vector_shrink(thsn_vector_t* /*in/out*/ vector,
-                                 size_t shrink_size) {
+ThsnResult thsn_vector_shrink(ThsnVector* /*in/out*/ vector,
+                              size_t shrink_size) {
     BAIL_ON_NULL_INPUT(vector);
     if (vector->offset < shrink_size) {
         return THSN_RESULT_INPUT_ERROR;
@@ -53,8 +51,8 @@ thsn_result_t thsn_vector_shrink(thsn_vector_t* /*in/out*/ vector,
     return THSN_RESULT_SUCCESS;
 }
 
-thsn_result_t thsn_vector_push(thsn_vector_t* /*in/out*/ vector,
-                               thsn_slice_t /*in*/ slice) {
+ThsnResult thsn_vector_push(ThsnVector* /*in/out*/ vector,
+                            ThsnSlice /*in*/ slice) {
     BAIL_ON_NULL_INPUT(vector);
     BAIL_ON_NULL_INPUT(slice.data);
     size_t pregrow_offset = vector->offset;
@@ -64,8 +62,8 @@ thsn_result_t thsn_vector_push(thsn_vector_t* /*in/out*/ vector,
     return THSN_RESULT_SUCCESS;
 }
 
-thsn_result_t thsn_vector_pop(thsn_vector_t* /*in/out*/ vector,
-                              thsn_slice_t /*out*/ slice) {
+ThsnResult thsn_vector_pop(ThsnVector* /*in/out*/ vector,
+                           ThsnSlice /*out*/ slice) {
     BAIL_ON_NULL_INPUT(vector);
     BAIL_ON_NULL_INPUT(slice.data);
     BAIL_ON_ERROR(thsn_vector_shrink(vector, slice.size));

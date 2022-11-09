@@ -1,8 +1,7 @@
 #include "tags.h"
 
-thsn_result_t thsn_vector_store_tagged_value(thsn_vector_t* /*in/out*/ vector,
-                                             thsn_tag_t tag,
-                                             thsn_slice_t value_slice) {
+ThsnResult thsn_vector_store_tagged_value(ThsnVector* /*in/out*/ vector,
+                                          ThsnTag tag, ThsnSlice value_slice) {
     BAIL_ON_NULL_INPUT(vector);
     if (value_slice.size > 0) {
         BAIL_ON_NULL_INPUT(value_slice.data);
@@ -18,13 +17,12 @@ thsn_result_t thsn_vector_store_tagged_value(thsn_vector_t* /*in/out*/ vector,
     return THSN_RESULT_SUCCESS;
 }
 
-thsn_result_t thsn_vector_store_null(thsn_vector_t* /*in/out*/ vector) {
+ThsnResult thsn_vector_store_null(ThsnVector* /*in/out*/ vector) {
     return thsn_vector_store_tagged_value(
         vector, THSN_TAG_MAKE(THSN_TAG_NULL, 0), THSN_SLICE_MAKE_EMPTY());
 }
 
-thsn_result_t thsn_vector_store_bool(thsn_vector_t* /*in/out*/ vector,
-                                     bool value) {
+ThsnResult thsn_vector_store_bool(ThsnVector* /*in/out*/ vector, bool value) {
     return thsn_vector_store_tagged_value(
         vector,
         THSN_TAG_MAKE(THSN_TAG_BOOL,
@@ -32,15 +30,15 @@ thsn_result_t thsn_vector_store_bool(thsn_vector_t* /*in/out*/ vector,
         THSN_SLICE_MAKE_EMPTY());
 }
 
-thsn_result_t thsn_vector_store_double(thsn_vector_t* /*in/out*/ vector,
-                                       double value) {
+ThsnResult thsn_vector_store_double(ThsnVector* /*in/out*/ vector,
+                                    double value) {
     return thsn_vector_store_tagged_value(
         vector, THSN_TAG_MAKE(THSN_TAG_DOUBLE, THSN_TAG_SIZE_F64),
         THSN_SLICE_FROM_VAR(value));
 }
 
-thsn_result_t thsn_vector_store_int(thsn_vector_t* /*in/out*/ vector,
-                                    long long value) {
+ThsnResult thsn_vector_store_int(ThsnVector* /*in/out*/ vector,
+                                 long long value) {
     if (value == 0) {
         return thsn_vector_store_tagged_value(
             vector, THSN_TAG_MAKE(THSN_TAG_INT, THSN_TAG_SIZE_ZERO),
@@ -69,8 +67,8 @@ thsn_result_t thsn_vector_store_int(thsn_vector_t* /*in/out*/ vector,
         THSN_SLICE_FROM_VAR(value));
 }
 
-thsn_result_t thsn_vector_store_string(thsn_vector_t* /*in/out*/ vector,
-                                       thsn_slice_t string_slice) {
+ThsnResult thsn_vector_store_string(ThsnVector* /*in/out*/ vector,
+                                    ThsnSlice string_slice) {
     if (string_slice.size <= THSN_TAG_SIZE_MAX) {
         return thsn_vector_store_tagged_value(
             vector, THSN_TAG_MAKE(THSN_TAG_SMALL_STRING, string_slice.size),

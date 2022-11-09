@@ -7,16 +7,15 @@ typedef enum {
     THSN_VISIT_TAG_OBJECT_NODE,
     THSN_VISIT_TAG_OBJECT_KV,
     THSN_VISIT_TAG_OBJECT_END,
-} thsn_visit_tag_t;
+} ThsnVisitTag;
 
-static const thsn_visit_tag_t VISIT_TAG_ARRAY = THSN_VISIT_TAG_ARRAY;
-static const thsn_visit_tag_t VISIT_TAG_OBJECT_NODE =
-    THSN_VISIT_TAG_OBJECT_NODE;
-static const thsn_visit_tag_t VISIT_TAG_OBJECT_KV = THSN_VISIT_TAG_OBJECT_KV;
-static const thsn_visit_tag_t VISIT_TAG_OBJECT_END = THSN_VISIT_TAG_OBJECT_END;
+static const ThsnVisitTag VISIT_TAG_ARRAY = THSN_VISIT_TAG_ARRAY;
+static const ThsnVisitTag VISIT_TAG_OBJECT_NODE = THSN_VISIT_TAG_OBJECT_NODE;
+static const ThsnVisitTag VISIT_TAG_OBJECT_KV = THSN_VISIT_TAG_OBJECT_KV;
+static const ThsnVisitTag VISIT_TAG_OBJECT_END = THSN_VISIT_TAG_OBJECT_END;
 
-thsn_result_t thsn_visit(thsn_slice_t parse_result,
-                         thsn_visitor_vtable_t* vtable, void* user_data) {
+ThsnResult thsn_visit(ThsnSlice parse_result, ThsnVisitorVTable* vtable,
+                      void* user_data) {
 #define PROCESS_VISITOR_RESULT(result)              \
     do {                                            \
         switch ((result)) {                         \
@@ -61,20 +60,20 @@ thsn_result_t thsn_visit(thsn_slice_t parse_result,
         return THSN_RESULT_SUCCESS;
     }
 
-    thsn_visitor_context_t context = {
+    ThsnVisitorContext context = {
         .key = THSN_SLICE_MAKE_EMPTY(),
         .in_array = false,
         .last = false,
     };
 
-    thsn_vector_t stack = THSN_VECTOR_INIT();
+    ThsnVector stack = THSN_VECTOR_INIT();
     bool skip = false;
     size_t next_offset = 0;
     bool done_visiting = false;
     BAIL_ON_ERROR(thsn_vector_make(&stack, 1024));
 
     do {
-        thsn_slice_t data_slice;
+        ThsnSlice data_slice;
         GOTO_ON_ERROR(
             thsn_slice_at_offset(parse_result, next_offset, &data_slice),
             error_cleanup);
@@ -98,7 +97,7 @@ thsn_result_t thsn_visit(thsn_slice_t parse_result,
                 break;
             }
             case THSN_TAG_REF_STRING: {
-                thsn_slice_t string_slice = THSN_SLICE_MAKE_EMPTY();
+                ThsnSlice string_slice = THSN_SLICE_MAKE_EMPTY();
 
                 if (THSN_TAG_SIZE(tag) != THSN_TAG_SIZE_EMPTY) {
                     READ_SLICE_INTO_VAR(data_slice, string_slice);
@@ -153,7 +152,7 @@ thsn_result_t thsn_visit(thsn_slice_t parse_result,
                     size_t elements_table_offset = 0;
                     READ_SLICE_INTO_VAR(data_slice, elements_count);
                     READ_SLICE_INTO_VAR(data_slice, elements_table_offset);
-                    thsn_slice_t elements_table_slice;
+                    ThsnSlice elements_table_slice;
                     GOTO_ON_ERROR(thsn_slice_at_offset(parse_result,
                                                        elements_table_offset,
                                                        &elements_table_slice),
@@ -211,7 +210,7 @@ thsn_result_t thsn_visit(thsn_slice_t parse_result,
                 done_visiting = true;
                 break;
             }
-            thsn_visit_tag_t next_visit_tag;
+            ThsnVisitTag next_visit_tag;
             GOTO_ON_ERROR(THSN_VECTOR_POP_VAR(stack, next_visit_tag),
                           error_cleanup);
             switch (next_visit_tag) {
@@ -248,7 +247,7 @@ thsn_result_t thsn_visit(thsn_slice_t parse_result,
                     size_t object_offset;
                     GOTO_ON_ERROR(THSN_VECTOR_POP_VAR(stack, object_offset),
                                   error_cleanup);
-                    thsn_slice_t node_slice;
+                    ThsnSlice node_slice;
                     GOTO_ON_ERROR(thsn_slice_at_offset(
                                       parse_result, object_offset, &node_slice),
                                   error_cleanup);
@@ -291,7 +290,7 @@ thsn_result_t thsn_visit(thsn_slice_t parse_result,
                     size_t kv_offset;
                     GOTO_ON_ERROR(THSN_VECTOR_POP_VAR(stack, kv_offset),
                                   error_cleanup);
-                    thsn_slice_t kv_slice;
+                    ThsnSlice kv_slice;
                     GOTO_ON_ERROR(thsn_slice_at_offset(parse_result, kv_offset,
                                                        &kv_slice),
                                   error_cleanup);
@@ -299,7 +298,7 @@ thsn_result_t thsn_visit(thsn_slice_t parse_result,
                         goto error_cleanup;
                     }
                     char key_str_tag = THSN_SLICE_NEXT_CHAR_UNSAFE(kv_slice);
-                    thsn_slice_t key_slice = THSN_SLICE_MAKE_EMPTY();
+                    ThsnSlice key_slice = THSN_SLICE_MAKE_EMPTY();
                     size_t value_offset = 0;
                     switch (THSN_TAG_TYPE(key_str_tag)) {
                         case THSN_TAG_REF_STRING:
@@ -307,8 +306,8 @@ thsn_result_t thsn_visit(thsn_slice_t parse_result,
                                 THSN_TAG_SIZE_EMPTY) {
                                 READ_SLICE_INTO_VAR(kv_slice, key_slice);
                             }
-                            value_offset = kv_offset + sizeof(thsn_tag_t) +
-                                           sizeof(key_slice);
+                            value_offset =
+                                kv_offset + sizeof(ThsnTag) + sizeof(key_slice);
                             break;
                         case THSN_TAG_SMALL_STRING: {
                             size_t key_str_size = THSN_TAG_SIZE(key_str_tag);
@@ -318,7 +317,7 @@ thsn_result_t thsn_visit(thsn_slice_t parse_result,
                             key_slice =
                                 THSN_SLICE_MAKE(kv_slice.data, key_str_size);
                             value_offset =
-                                kv_offset + sizeof(thsn_tag_t) + key_str_size;
+                                kv_offset + sizeof(ThsnTag) + key_str_size;
                             break;
                         }
                         default:
@@ -327,13 +326,13 @@ thsn_result_t thsn_visit(thsn_slice_t parse_result,
                     next_offset = value_offset;
                     context.in_array = false;
                     context.last = false;
-                    if (THSN_VECTOR_OFFSET(stack) >= sizeof(thsn_visit_tag_t)) {
-                        thsn_visit_tag_t next_tag;
+                    if (THSN_VECTOR_OFFSET(stack) >= sizeof(ThsnVisitTag)) {
+                        ThsnVisitTag next_tag;
                         memcpy(&next_tag,
-                               THSN_VECTOR_AT_OFFSET(
-                                   stack, THSN_VECTOR_OFFSET(stack) -
-                                              sizeof(thsn_visit_tag_t)),
-                               sizeof(thsn_visit_tag_t));
+                               THSN_VECTOR_AT_OFFSET(stack,
+                                                     THSN_VECTOR_OFFSET(stack) -
+                                                         sizeof(ThsnVisitTag)),
+                               sizeof(ThsnVisitTag));
                         if (next_tag == THSN_VISIT_TAG_OBJECT_END) {
                             context.last = true;
                         }

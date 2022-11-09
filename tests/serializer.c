@@ -3,8 +3,8 @@
 #include "parser.h"
 #include "visitor.h"
 
-thsn_visitor_result_t visit_integer(thsn_visitor_context_t* context,
-                                    void* user_data, long long value) {
+ThsnVisitorResult visit_integer(ThsnVisitorContext* context, void* user_data,
+                                long long value) {
     (void)user_data;
     if (context->in_object) {
         printf("\"%.*s\": ", (int)context->key.size, context->key.data);
@@ -16,8 +16,8 @@ thsn_visitor_result_t visit_integer(thsn_visitor_context_t* context,
     return THSN_VISITOR_RESULT_CONTINUE;
 }
 
-thsn_visitor_result_t visit_float(thsn_visitor_context_t* context,
-                                  void* user_data, double value) {
+ThsnVisitorResult visit_float(ThsnVisitorContext* context, void* user_data,
+                              double value) {
     (void)user_data;
     if (context->in_object) {
         printf("\"%.*s\": ", (int)context->key.size, context->key.data);
@@ -28,8 +28,7 @@ thsn_visitor_result_t visit_float(thsn_visitor_context_t* context,
     }
     return THSN_VISITOR_RESULT_CONTINUE;
 }
-thsn_visitor_result_t visit_null(thsn_visitor_context_t* context,
-                                 void* user_data) {
+ThsnVisitorResult visit_null(ThsnVisitorContext* context, void* user_data) {
     (void)user_data;
     if (context->in_object) {
         printf("\"%.*s\": ", (int)context->key.size, context->key.data);
@@ -41,8 +40,8 @@ thsn_visitor_result_t visit_null(thsn_visitor_context_t* context,
     return THSN_VISITOR_RESULT_CONTINUE;
 }
 
-thsn_visitor_result_t visit_bool(thsn_visitor_context_t* context,
-                                 void* user_data, bool value) {
+ThsnVisitorResult visit_bool(ThsnVisitorContext* context, void* user_data,
+                             bool value) {
     (void)user_data;
     if (context->in_object) {
         printf("\"%.*s\": ", (int)context->key.size, context->key.data);
@@ -54,8 +53,8 @@ thsn_visitor_result_t visit_bool(thsn_visitor_context_t* context,
     return THSN_VISITOR_RESULT_CONTINUE;
 }
 
-thsn_visitor_result_t visit_string(thsn_visitor_context_t* context,
-                                   void* user_data, thsn_slice_t value) {
+ThsnVisitorResult visit_string(ThsnVisitorContext* context, void* user_data,
+                               ThsnSlice value) {
     (void)user_data;
     if (context->in_object) {
         printf("\"%.*s\": ", (int)context->key.size, context->key.data);
@@ -67,8 +66,8 @@ thsn_visitor_result_t visit_string(thsn_visitor_context_t* context,
     return THSN_VISITOR_RESULT_CONTINUE;
 }
 
-thsn_visitor_result_t visit_array_start(thsn_visitor_context_t* context,
-                                        void* user_data) {
+ThsnVisitorResult visit_array_start(ThsnVisitorContext* context,
+                                    void* user_data) {
     (void)user_data;
     if (context->in_object) {
         printf("\"%.*s\": ", (int)context->key.size, context->key.data);
@@ -77,8 +76,8 @@ thsn_visitor_result_t visit_array_start(thsn_visitor_context_t* context,
     return THSN_VISITOR_RESULT_CONTINUE;
 }
 
-thsn_visitor_result_t visit_array_end(thsn_visitor_context_t* context,
-                                      void* user_data) {
+ThsnVisitorResult visit_array_end(ThsnVisitorContext* context,
+                                  void* user_data) {
     (void)user_data;
     printf("]");
     if ((context->in_array || context->in_object) && !context->last) {
@@ -87,8 +86,8 @@ thsn_visitor_result_t visit_array_end(thsn_visitor_context_t* context,
     return THSN_VISITOR_RESULT_CONTINUE;
 }
 
-thsn_visitor_result_t visit_object_start(thsn_visitor_context_t* context,
-                                         void* user_data) {
+ThsnVisitorResult visit_object_start(ThsnVisitorContext* context,
+                                     void* user_data) {
     (void)user_data;
     if (context->in_object) {
         printf("\"%.*s\": ", (int)context->key.size, context->key.data);
@@ -97,8 +96,8 @@ thsn_visitor_result_t visit_object_start(thsn_visitor_context_t* context,
     return THSN_VISITOR_RESULT_CONTINUE;
 }
 
-thsn_visitor_result_t visit_object_end(thsn_visitor_context_t* context,
-                                       void* user_data) {
+ThsnVisitorResult visit_object_end(ThsnVisitorContext* context,
+                                   void* user_data) {
     (void)user_data;
     printf("}");
     if ((context->in_array || context->in_object) && !context->last) {
@@ -110,7 +109,7 @@ thsn_visitor_result_t visit_object_end(thsn_visitor_context_t* context,
 int main(int argc, char** argv) {
     (void)argc;
     (void)argv;
-    thsn_visitor_vtable_t visitor_vtable = {
+    ThsnVisitorVTable visitor_vtable = {
         .visit_null = visit_null,
         .visit_bool = visit_bool,
         .visit_integer = visit_integer,
@@ -128,7 +127,7 @@ int main(int argc, char** argv) {
         file = fopen(argv[1], "rb");
     }
 
-    thsn_vector_t input_data = THSN_VECTOR_INIT();
+    ThsnVector input_data = THSN_VECTOR_INIT();
     if (thsn_vector_make(&input_data, 1024) != THSN_RESULT_SUCCESS) {
         fprintf(stderr, "Can't allocate input storage\n");
         goto error_cleanup;
@@ -147,16 +146,18 @@ int main(int argc, char** argv) {
         }
     }
 
-    thsn_vector_t parse_result = THSN_VECTOR_INIT();
+    ThsnVector parse_result = THSN_VECTOR_INIT();
     if (thsn_vector_make(&parse_result, 1024) != THSN_RESULT_SUCCESS) {
         fprintf(stderr, "Can't allocate parse result storage\n");
         goto error_cleanup;
     }
-    thsn_slice_t input_slice = THSN_VECTOR_AS_SLICE(input_data);
+    ThsnSlice input_slice = THSN_VECTOR_AS_SLICE(input_data);
     if (thsn_parse_value(&input_slice, &parse_result) != THSN_RESULT_SUCCESS) {
         fprintf(stderr, "Can't parse input string\n");
         goto error_cleanup;
     }
+    fprintf(stderr, "Parse result size: %zu\n",
+            THSN_VECTOR_OFFSET(parse_result));
     if (thsn_visit(THSN_VECTOR_AS_SLICE(parse_result), &visitor_vtable, NULL) !=
         THSN_RESULT_SUCCESS) {
         fprintf(stderr, "Can't visit parse result\n");

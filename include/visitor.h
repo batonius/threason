@@ -10,38 +10,38 @@ typedef enum {
     THSN_VISITOR_RESULT_ABORT_SUCCESS,
     THSN_VISITOR_RESULT_SKIP,
     THSN_VISITOR_RESULT_CONTINUE,
-} thsn_visitor_result_t;
+} ThsnVisitorResult;
 
 typedef struct {
-    thsn_slice_t key;
+    ThsnSlice key;
     bool in_array;
     bool in_object;
     bool last;
-} thsn_visitor_context_t;
+} ThsnVisitorContext;
 
 typedef struct {
-    thsn_visitor_result_t (*visit_integer)(thsn_visitor_context_t* context,
-                                           void* user_data, long long value);
-    thsn_visitor_result_t (*visit_float)(thsn_visitor_context_t* context,
-                                         void* user_data, double value);
-    thsn_visitor_result_t (*visit_null)(thsn_visitor_context_t* context,
-                                        void* user_data);
-    thsn_visitor_result_t (*visit_bool)(thsn_visitor_context_t* context,
-                                        void* user_data, bool value);
-    thsn_visitor_result_t (*visit_string)(thsn_visitor_context_t* context,
-                                        void* user_data, thsn_slice_t value);
-    thsn_visitor_result_t (*visit_array_start)(thsn_visitor_context_t* context,
-                                               void* user_data);
-    thsn_visitor_result_t (*visit_array_end)(thsn_visitor_context_t* context,
-                                             void* user_data);
-    thsn_visitor_result_t (*visit_object_start)(thsn_visitor_context_t* context,
-                                                void* user_data);
-    thsn_visitor_result_t (*visit_object_end)(thsn_visitor_context_t* context,
-                                              void* user_data);
-} thsn_visitor_vtable_t;
+    ThsnVisitorResult (*visit_integer)(ThsnVisitorContext* context,
+                                       void* user_data, long long value);
+    ThsnVisitorResult (*visit_float)(ThsnVisitorContext* context,
+                                     void* user_data, double value);
+    ThsnVisitorResult (*visit_null)(ThsnVisitorContext* context,
+                                    void* user_data);
+    ThsnVisitorResult (*visit_bool)(ThsnVisitorContext* context,
+                                    void* user_data, bool value);
+    ThsnVisitorResult (*visit_string)(ThsnVisitorContext* context,
+                                      void* user_data, ThsnSlice value);
+    ThsnVisitorResult (*visit_array_start)(ThsnVisitorContext* context,
+                                           void* user_data);
+    ThsnVisitorResult (*visit_array_end)(ThsnVisitorContext* context,
+                                         void* user_data);
+    ThsnVisitorResult (*visit_object_start)(ThsnVisitorContext* context,
+                                            void* user_data);
+    ThsnVisitorResult (*visit_object_end)(ThsnVisitorContext* context,
+                                          void* user_data);
+} ThsnVisitorVTable;
 
 #define THSN_VISITOR_VTABLE_DEFAULT() \
-    (thsn_visitor_vtable_t) {}
+    (ThsnVisitorVTable) {}
 
-thsn_result_t thsn_visit(thsn_slice_t parsed_data,
-                         thsn_visitor_vtable_t* vtable, void* user_data);
+ThsnResult thsn_visit(ThsnSlice parsed_data, ThsnVisitorVTable* vtable,
+                      void* user_data);
