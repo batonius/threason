@@ -160,11 +160,12 @@ int main(int argc, char** argv) {
             THSN_VECTOR_OFFSET(parse_result));
     if (thsn_visit(THSN_VECTOR_AS_SLICE(parse_result), &visitor_vtable, NULL) !=
         THSN_RESULT_SUCCESS) {
-        fprintf(stderr, "Can't visit parse result\n");
+        fprintf(stderr, "\nCan't visit parse result\n");
         goto error_cleanup;
     }
     printf("\n");
     thsn_vector_free(&parse_result);
+    thsn_vector_free(&input_data);
     return 0;
 
 error_cleanup:
