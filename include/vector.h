@@ -33,8 +33,28 @@ typedef struct {
 #define THSN_VECTOR_PUSH_VAR(vector, var) \
     thsn_vector_push(&(vector), THSN_SLICE_FROM_VAR(var))
 
+#define THSN_VECTOR_PUSH_2_VARS(vector, var1, var2)               \
+    THSN_VECTOR_PUSH_VAR((vector), (var1)) == THSN_RESULT_SUCCESS \
+        ? THSN_VECTOR_PUSH_VAR((vector), (var2))                  \
+        : THSN_RESULT_INPUT_ERROR
+
+#define THSN_VECTOR_PUSH_3_VARS(vector, var1, var2, var3)         \
+    THSN_VECTOR_PUSH_VAR((vector), (var1)) == THSN_RESULT_SUCCESS \
+        ? THSN_VECTOR_PUSH_2_VARS((vector), (var2), (var3))       \
+        : THSN_RESULT_INPUT_ERROR
+
 #define THSN_VECTOR_POP_VAR(vector, var) \
     thsn_vector_pop(&(vector), THSN_SLICE_FROM_VAR(var))
+
+#define THSN_VECTOR_POP_2_VARS(vector, var1, var2)               \
+    THSN_VECTOR_POP_VAR((vector), (var1)) == THSN_RESULT_SUCCESS \
+        ? THSN_VECTOR_POP_VAR((vector), (var2))                  \
+        : THSN_RESULT_INPUT_ERROR
+
+#define THSN_VECTOR_POP_3_VARS(vector, var1, var2, var3)         \
+    THSN_VECTOR_POP_VAR((vector), (var1)) == THSN_RESULT_SUCCESS \
+        ? THSN_VECTOR_POP_2_VARS((vector), (var2), (var3))       \
+        : THSN_RESULT_INPUT_ERROR
 
 inline ThsnResult thsn_vector_make(ThsnVector* /*out*/ vector,
                                    size_t prealloc_size) {

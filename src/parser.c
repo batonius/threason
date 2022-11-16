@@ -79,8 +79,6 @@ static ThsnResult thsn_parser_parse_value(ThsnToken token,
 
 static ThsnResult thsn_parser_store_composite_header(
     ThsnParserStatus* parser_status, ThsnVector* result_vector, ThsnTag tag) {
-    // Save the composite tag and reserve two size_t for number of elements
-    // and an offset to a elements offsets table
     size_t composite_header_size = sizeof(ThsnTag) + 2 * sizeof(size_t);
     size_t composite_header_offset = THSN_VECTOR_OFFSET(*result_vector);
     BAIL_ON_ERROR(thsn_vector_grow(result_vector, composite_header_size));
@@ -88,16 +86,11 @@ static ThsnResult thsn_parser_store_composite_header(
         THSN_VECTOR_AT_OFFSET(*result_vector, composite_header_offset);
     memcpy(composite_header, &tag, sizeof(tag));
     composite_header_offset += sizeof(tag);
-    // Push offset to composite header, offset to the first element, number of
-    // elements
-    BAIL_ON_ERROR(
-        THSN_VECTOR_PUSH_VAR(parser_status->stack, composite_header_offset));
     size_t first_element_offset = THSN_VECTOR_OFFSET(*result_vector);
-    BAIL_ON_ERROR(
-        THSN_VECTOR_PUSH_VAR(parser_status->stack, first_element_offset));
     size_t composite_elements_count = 1;
-    BAIL_ON_ERROR(
-        THSN_VECTOR_PUSH_VAR(parser_status->stack, composite_elements_count));
+    BAIL_ON_ERROR(THSN_VECTOR_PUSH_3_VARS(
+        parser_status->stack, composite_header_offset, first_element_offset,
+        composite_elements_count));
     return THSN_RESULT_SUCCESS;
 }
 
@@ -107,10 +100,9 @@ static ThsnResult thsn_parser_add_composite_element(
     BAIL_ON_ERROR(
         THSN_VECTOR_POP_VAR(parser_status->stack, array_elements_count));
     size_t result_offset = THSN_VECTOR_OFFSET(*result_vector);
-    BAIL_ON_ERROR(THSN_VECTOR_PUSH_VAR(parser_status->stack, result_offset));
     ++array_elements_count;
-    BAIL_ON_ERROR(
-        THSN_VECTOR_PUSH_VAR(parser_status->stack, array_elements_count));
+    BAIL_ON_ERROR(THSN_VECTOR_PUSH_2_VARS(parser_status->stack, result_offset,
+                                          array_elements_count));
     return THSN_RESULT_SUCCESS;
 }
 

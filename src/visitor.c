@@ -166,11 +166,8 @@ ThsnResult thsn_visit(ThsnSlice parse_result, ThsnVisitorVTable* vtable,
                             error_cleanup);
                     }
                 }
-                GOTO_ON_ERROR(THSN_VECTOR_PUSH_VAR(stack, elements_count),
-                              error_cleanup);
-                GOTO_ON_ERROR(THSN_VECTOR_PUSH_VAR(stack, context),
-                              error_cleanup);
-                GOTO_ON_ERROR(THSN_VECTOR_PUSH_VAR(stack, VISIT_TAG_ARRAY),
+                GOTO_ON_ERROR(THSN_VECTOR_PUSH_3_VARS(stack, elements_count,
+                                                      context, VISIT_TAG_ARRAY),
                               error_cleanup);
                 break;
             }
@@ -195,12 +192,10 @@ ThsnResult thsn_visit(ThsnSlice parse_result, ThsnVisitorVTable* vtable,
                         thsn_vector_push(&stack, elements_table_slice),
                         error_cleanup);
                 }
-                GOTO_ON_ERROR(THSN_VECTOR_PUSH_VAR(stack, elements_count),
-                              error_cleanup);
-                GOTO_ON_ERROR(THSN_VECTOR_PUSH_VAR(stack, context),
-                              error_cleanup);
-                GOTO_ON_ERROR(THSN_VECTOR_PUSH_VAR(stack, VISIT_TAG_OBJECT_KV),
-                              error_cleanup);
+                GOTO_ON_ERROR(
+                    THSN_VECTOR_PUSH_3_VARS(stack, elements_count, context,
+                                            VISIT_TAG_OBJECT_KV),
+                    error_cleanup);
             }
         }
 
@@ -215,11 +210,10 @@ ThsnResult thsn_visit(ThsnSlice parse_result, ThsnVisitorVTable* vtable,
                           error_cleanup);
             switch (next_visit_tag) {
                 case THSN_VISIT_TAG_ARRAY: {
-                    GOTO_ON_ERROR(THSN_VECTOR_POP_VAR(stack, context),
-                                  error_cleanup);
                     size_t elements_count;
-                    GOTO_ON_ERROR(THSN_VECTOR_POP_VAR(stack, elements_count),
-                                  error_cleanup);
+                    GOTO_ON_ERROR(
+                        THSN_VECTOR_POP_2_VARS(stack, context, elements_count),
+                        error_cleanup);
                     if (elements_count == 0) {
                         CALL_VISITOR2(vtable->visit_array_end, &context,
                                       user_data);
@@ -229,12 +223,10 @@ ThsnResult thsn_visit(ThsnSlice parse_result, ThsnVisitorVTable* vtable,
                     GOTO_ON_ERROR(THSN_VECTOR_POP_VAR(stack, element_offset),
                                   error_cleanup);
                     --elements_count;
-                    GOTO_ON_ERROR(THSN_VECTOR_PUSH_VAR(stack, elements_count),
-                                  error_cleanup);
-                    GOTO_ON_ERROR(THSN_VECTOR_PUSH_VAR(stack, context),
-                                  error_cleanup);
-                    GOTO_ON_ERROR(THSN_VECTOR_PUSH_VAR(stack, VISIT_TAG_ARRAY),
-                                  error_cleanup);
+                    GOTO_ON_ERROR(
+                        THSN_VECTOR_PUSH_3_VARS(stack, elements_count, context,
+                                                VISIT_TAG_ARRAY),
+                        error_cleanup);
                     next_offset = element_offset;
                     context.in_object = false;
                     context.in_array = true;
@@ -244,11 +236,10 @@ ThsnResult thsn_visit(ThsnSlice parse_result, ThsnVisitorVTable* vtable,
                     break;
                 }
                 case THSN_VISIT_TAG_OBJECT_KV: {
-                    GOTO_ON_ERROR(THSN_VECTOR_POP_VAR(stack, context),
-                                  error_cleanup);
                     size_t elements_count;
-                    GOTO_ON_ERROR(THSN_VECTOR_POP_VAR(stack, elements_count),
-                                  error_cleanup);
+                    GOTO_ON_ERROR(
+                        THSN_VECTOR_POP_2_VARS(stack, context, elements_count),
+                        error_cleanup);
                     if (elements_count == 0) {
                         CALL_VISITOR2(vtable->visit_object_end, &context,
                                       user_data);
@@ -258,12 +249,9 @@ ThsnResult thsn_visit(ThsnSlice parse_result, ThsnVisitorVTable* vtable,
                     GOTO_ON_ERROR(THSN_VECTOR_POP_VAR(stack, kv_offset),
                                   error_cleanup);
                     --elements_count;
-                    GOTO_ON_ERROR(THSN_VECTOR_PUSH_VAR(stack, elements_count),
-                                  error_cleanup);
-                    GOTO_ON_ERROR(THSN_VECTOR_PUSH_VAR(stack, context),
-                                  error_cleanup);
                     GOTO_ON_ERROR(
-                        THSN_VECTOR_PUSH_VAR(stack, VISIT_TAG_OBJECT_KV),
+                        THSN_VECTOR_PUSH_3_VARS(stack, elements_count, context,
+                                                VISIT_TAG_OBJECT_KV),
                         error_cleanup);
                     ThsnSlice kv_slice;
                     GOTO_ON_ERROR(thsn_slice_at_offset(parse_result, kv_offset,
