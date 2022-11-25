@@ -1,5 +1,6 @@
 CC=clang
-CFLAGS=-Wall -Wextra -Werror -pedantic -std=c2x -march=native -D_POSIX_C_SOURCE=200809 -Iinclude -flto
+CFLAGS=-Wall -Wextra -Werror -pedantic -std=c2x -march=native \
+	 -D_POSIX_C_SOURCE=200809 -D_GNU_SOURCE -Iinclude -flto
 BUILD-DIR=build
 SRC-DIR=src
 TEST-DIR=tests
@@ -24,7 +25,7 @@ else
 	LDFLAGS+= -s
 endif
 
-ifdef ANSAN
+ifdef ASAN
 	CFLAGS+= -fsanitize=address
 	LDFLAGS+= -fsanitize=address
 endif

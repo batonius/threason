@@ -257,32 +257,12 @@ ThsnResult thsn_visit(ThsnSlice parse_result, ThsnVisitorVTable* vtable,
                     GOTO_ON_ERROR(thsn_slice_at_offset(parse_result, kv_offset,
                                                        sizeof(char), &kv_slice),
                                   error_cleanup);
-                    char key_str_tag = THSN_SLICE_NEXT_CHAR_UNSAFE(kv_slice);
                     ThsnSlice key_slice = THSN_SLICE_MAKE_EMPTY();
                     size_t value_offset = 0;
-                    switch (THSN_TAG_TYPE(key_str_tag)) {
-                        case THSN_TAG_REF_STRING:
-                            if (THSN_TAG_SIZE(key_str_tag) !=
-                                THSN_TAG_SIZE_EMPTY) {
-                                READ_SLICE_INTO_VAR(kv_slice, key_slice);
-                            }
-                            value_offset =
-                                kv_offset + sizeof(ThsnTag) + sizeof(key_slice);
-                            break;
-                        case THSN_TAG_SMALL_STRING: {
-                            size_t key_str_size = THSN_TAG_SIZE(key_str_tag);
-                            if (kv_slice.size < key_str_size) {
-                                goto error_cleanup;
-                            }
-                            key_slice =
-                                THSN_SLICE_MAKE(kv_slice.data, key_str_size);
-                            value_offset =
-                                kv_offset + sizeof(ThsnTag) + key_str_size;
-                            break;
-                        }
-                        default:
-                            goto error_cleanup;
-                    }
+                    GOTO_ON_ERROR(thsn_slice_read_string(kv_slice, &key_slice,
+                                                         &value_offset),
+                                  error_cleanup);
+                    value_offset += kv_offset;
                     next_offset = value_offset;
                     context.in_array = false;
                     context.last = elements_count == 0;

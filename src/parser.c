@@ -1,3 +1,5 @@
+#include <stdlib.h>
+
 #include "parser.h"
 #include "tags.h"
 #include "tokenizer.h"
@@ -42,6 +44,56 @@ static long long thsn_atoll_checked(ThsnSlice slice) {
         }
     }
     return result;
+}
+
+int thsn_parser_compare_kv_keys(const void* a, const void* b, void* data) {
+    size_t a_offset;
+    size_t b_offset;
+    memcpy(&a_offset, a, sizeof(size_t));
+    memcpy(&b_offset, b, sizeof(size_t));
+    ThsnVector* result_vector = (ThsnVector*)data;
+    ThsnSlice a_key_slice;
+    ThsnSlice b_key_slice;
+    if (thsn_slice_at_offset(THSN_VECTOR_AS_SLICE(*result_vector), a_offset, 1,
+                             &a_key_slice) != THSN_RESULT_SUCCESS) {
+        return 0;
+    }
+    if (thsn_slice_at_offset(THSN_VECTOR_AS_SLICE(*result_vector), b_offset, 1,
+                             &b_key_slice) != THSN_RESULT_SUCCESS) {
+        return 0;
+    }
+    ThsnSlice a_key_str_slice;
+    ThsnSlice b_key_str_slice;
+    if (thsn_slice_read_string(a_key_slice, &a_key_str_slice, NULL)) {
+        return 0;
+    }
+    if (thsn_slice_read_string(b_key_slice, &b_key_str_slice, NULL)) {
+        return 0;
+    }
+    const size_t min_len = a_key_str_slice.size < b_key_str_slice.size
+                               ? a_key_str_slice.size
+                               : b_key_str_slice.size;
+    int cmp_result =
+        memcmp(a_key_str_slice.data, b_key_str_slice.data, min_len);
+    if (cmp_result == 0) {
+        if (a_key_str_slice.size == b_key_str_slice.size) {
+            return 0;
+        } else if (a_key_str_slice.size < b_key_str_slice.size) {
+            return 1;
+        } else {
+            return -1;
+        }
+    } else {
+        return -cmp_result;
+    }
+}
+
+static ThsnResult thsn_parser_sort_elements_table(
+    ThsnSlice elements_table_slice, ThsnVector* result_vector) {
+    qsort_r(elements_table_slice.data,
+            elements_table_slice.size / sizeof(size_t), sizeof(size_t),
+            thsn_parser_compare_kv_keys, result_vector);
+    return THSN_RESULT_SUCCESS;
 }
 
 static ThsnResult thsn_parser_parse_value(ThsnToken token,
@@ -107,7 +159,8 @@ static ThsnResult thsn_parser_add_composite_element(
 }
 
 static ThsnResult thsn_parser_store_composite_elements_table(
-    ThsnParserStatus* parser_status, ThsnVector* result_vector) {
+    ThsnParserStatus* parser_status, ThsnVector* result_vector,
+    bool sort_as_kv) {
     size_t composite_elements_count;
     BAIL_ON_ERROR(
         THSN_VECTOR_POP_VAR(parser_status->stack, composite_elements_count));
@@ -116,10 +169,15 @@ static ThsnResult thsn_parser_store_composite_elements_table(
     BAIL_ON_ERROR(
         thsn_vector_shrink(&parser_status->stack, elements_offsets_table_size));
     size_t elements_offsets_table_offset = THSN_VECTOR_OFFSET(*result_vector);
-    BAIL_ON_ERROR(thsn_vector_push(
-        result_vector,
+    ThsnSlice elements_offsets_table_slice =
         THSN_SLICE_MAKE(THSN_VECTOR_AT_CURRENT_OFFSET(parser_status->stack),
-                        elements_offsets_table_size)));
+                        elements_offsets_table_size);
+    if (sort_as_kv) {
+        BAIL_ON_ERROR(thsn_parser_sort_elements_table(
+            elements_offsets_table_slice, result_vector));
+    }
+    BAIL_ON_ERROR(
+        thsn_vector_push(result_vector, elements_offsets_table_slice));
     size_t composite_header_offset;
     BAIL_ON_ERROR(
         THSN_VECTOR_POP_VAR(parser_status->stack, composite_header_offset));
@@ -159,7 +217,7 @@ static ThsnResult thsn_parser_parse_next_array_element(
     (void)token_slice;
     if (token == THSN_TOKEN_CLOSED_BRACKET) {
         BAIL_ON_ERROR(thsn_parser_store_composite_elements_table(
-            parser_status, result_vector));
+            parser_status, result_vector, /*sort_as_kv = */ false));
         parser_status->state = THSN_PARSER_STATE_FINISH;
         return THSN_RESULT_SUCCESS;
     }
@@ -232,7 +290,7 @@ static ThsnResult thsn_parser_parse_kv_end(ThsnToken token,
     (void)result_vector;
     if (token == THSN_TOKEN_CLOSED_BRACE) {
         BAIL_ON_ERROR(thsn_parser_store_composite_elements_table(
-            parser_status, result_vector));
+            parser_status, result_vector, /*sort_as_kv=*/true));
         parser_status->state = THSN_PARSER_STATE_FINISH;
         return THSN_RESULT_SUCCESS;
     }

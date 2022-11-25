@@ -113,3 +113,42 @@ inline ThsnResult thsn_vector_store_string(ThsnVector* /*in/out*/ vector,
             THSN_SLICE_FROM_VAR(string_slice));
     }
 }
+
+inline ThsnResult thsn_slice_read_string(ThsnSlice stored_string_slice,
+                                         ThsnSlice* /*out*/ string_slice,
+                                         size_t* /*out*/ stored_length) {
+    if (stored_string_slice.size < sizeof(char)) {
+        return THSN_RESULT_INPUT_ERROR;
+    }
+    char key_str_tag = THSN_SLICE_NEXT_CHAR_UNSAFE(stored_string_slice);
+    *string_slice = THSN_SLICE_MAKE_EMPTY();
+    switch (THSN_TAG_TYPE(key_str_tag)) {
+        case THSN_TAG_REF_STRING:
+            if (THSN_TAG_SIZE(key_str_tag) != THSN_TAG_SIZE_EMPTY) {
+                if (stored_string_slice.size < sizeof(*string_slice)) {
+                    return THSN_RESULT_INPUT_ERROR;
+                }
+                memcpy(string_slice, stored_string_slice.data,
+                       sizeof(*string_slice));
+            }
+            if (stored_length != NULL) {
+                *stored_length = sizeof(ThsnTag) + sizeof(*string_slice);
+            }
+            break;
+        case THSN_TAG_SMALL_STRING: {
+            size_t key_str_size = THSN_TAG_SIZE(key_str_tag);
+            if (stored_string_slice.size < key_str_size) {
+                return THSN_RESULT_INPUT_ERROR;
+            }
+            *string_slice =
+                THSN_SLICE_MAKE(stored_string_slice.data, key_str_size);
+            if (stored_length != NULL) {
+                *stored_length = sizeof(ThsnTag) + key_str_size;
+            }
+            break;
+        }
+        default:
+            return THSN_RESULT_INPUT_ERROR;
+    }
+    return THSN_RESULT_SUCCESS;
+}
