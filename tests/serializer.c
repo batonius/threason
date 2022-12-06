@@ -28,6 +28,7 @@ ThsnVisitorResult visit_float(ThsnVisitorContext* context, void* user_data,
     }
     return THSN_VISITOR_RESULT_CONTINUE;
 }
+
 ThsnVisitorResult visit_null(ThsnVisitorContext* context, void* user_data) {
     (void)user_data;
     if (context->in_object) {

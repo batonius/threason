@@ -79,12 +79,12 @@ int thsn_parser_compare_kv_keys(const void* a, const void* b, void* data) {
         if (a_key_str_slice.size == b_key_str_slice.size) {
             return 0;
         } else if (a_key_str_slice.size < b_key_str_slice.size) {
-            return 1;
-        } else {
             return -1;
+        } else {
+            return 1;
         }
     } else {
-        return -cmp_result;
+        return cmp_result;
     }
 }
 

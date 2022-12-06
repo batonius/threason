@@ -149,22 +149,9 @@ ThsnResult thsn_visit(ThsnSlice parse_result, ThsnVisitorVTable* vtable,
                     size_t elements_table_offset = 0;
                     READ_SLICE_INTO_VAR(data_slice, elements_count);
                     READ_SLICE_INTO_VAR(data_slice, elements_table_offset);
-                    ThsnSlice elements_table_slice;
-                    GOTO_ON_ERROR(thsn_slice_at_offset(
-                                      parse_result, elements_table_offset,
-                                      elements_count * sizeof(size_t),
-                                      &elements_table_slice),
-                                  error_cleanup);
-                    for (size_t i = 0; i < elements_count; ++i) {
-                        size_t element_offset;
-                        memcpy(&element_offset,
-                               elements_table_slice.data +
-                                   (elements_count - i - 1) * sizeof(size_t),
-                               sizeof(element_offset));
-                        GOTO_ON_ERROR(
-                            THSN_VECTOR_PUSH_VAR(stack, element_offset),
-                            error_cleanup);
-                    }
+                    GOTO_ON_ERROR(
+                        THSN_VECTOR_PUSH_VAR(stack, elements_table_offset),
+                        error_cleanup);
                 }
                 GOTO_ON_ERROR(THSN_VECTOR_PUSH_3_VARS(stack, elements_count,
                                                       context, VISIT_TAG_ARRAY),
@@ -181,15 +168,8 @@ ThsnResult thsn_visit(ThsnSlice parse_result, ThsnVisitorVTable* vtable,
                     size_t elements_table_offset = 0;
                     READ_SLICE_INTO_VAR(data_slice, elements_count);
                     READ_SLICE_INTO_VAR(data_slice, elements_table_offset);
-                    ThsnSlice elements_table_slice;
-                    GOTO_ON_ERROR(thsn_slice_at_offset(
-                                      parse_result, elements_table_offset,
-                                      elements_count * sizeof(size_t),
-                                      &elements_table_slice),
-                                  error_cleanup);
-                    elements_table_slice.size = elements_count * sizeof(size_t);
                     GOTO_ON_ERROR(
-                        thsn_vector_push(&stack, elements_table_slice),
+                        THSN_VECTOR_PUSH_VAR(stack, elements_table_offset),
                         error_cleanup);
                 }
                 GOTO_ON_ERROR(
@@ -219,10 +199,24 @@ ThsnResult thsn_visit(ThsnSlice parse_result, ThsnVisitorVTable* vtable,
                                       user_data);
                         break;
                     }
-                    size_t element_offset;
-                    GOTO_ON_ERROR(THSN_VECTOR_POP_VAR(stack, element_offset),
+                    size_t element_offset_offset;
+                    GOTO_ON_ERROR(
+                        THSN_VECTOR_POP_VAR(stack, element_offset_offset),
+                        error_cleanup);
+                    ThsnSlice element_offset_slice;
+                    GOTO_ON_ERROR(thsn_slice_at_offset(
+                                      parse_result, element_offset_offset,
+                                      sizeof(size_t), &element_offset_slice),
                                   error_cleanup);
+                    size_t element_offset;
+                    READ_SLICE_INTO_VAR(element_offset_slice, element_offset);
                     --elements_count;
+                    if (elements_count > 0) {
+                        element_offset_offset += sizeof(size_t);
+                        GOTO_ON_ERROR(
+                            THSN_VECTOR_PUSH_VAR(stack, element_offset_offset),
+                            error_cleanup);
+                    }
                     GOTO_ON_ERROR(
                         THSN_VECTOR_PUSH_3_VARS(stack, elements_count, context,
                                                 VISIT_TAG_ARRAY),
@@ -245,10 +239,23 @@ ThsnResult thsn_visit(ThsnSlice parse_result, ThsnVisitorVTable* vtable,
                                       user_data);
                         break;
                     }
-                    size_t kv_offset;
-                    GOTO_ON_ERROR(THSN_VECTOR_POP_VAR(stack, kv_offset),
+                    size_t kv_offset_offset;
+                    GOTO_ON_ERROR(THSN_VECTOR_POP_VAR(stack, kv_offset_offset),
                                   error_cleanup);
+                    ThsnSlice kv_offset_slice;
+                    GOTO_ON_ERROR(
+                        thsn_slice_at_offset(parse_result, kv_offset_offset,
+                                             sizeof(size_t), &kv_offset_slice),
+                        error_cleanup);
+                    size_t kv_offset;
+                    READ_SLICE_INTO_VAR(kv_offset_slice, kv_offset);
                     --elements_count;
+                    if (elements_count > 0) {
+                        kv_offset_offset += sizeof(size_t);
+                        GOTO_ON_ERROR(
+                            THSN_VECTOR_PUSH_VAR(stack, kv_offset_offset),
+                            error_cleanup);
+                    }
                     GOTO_ON_ERROR(
                         THSN_VECTOR_PUSH_3_VARS(stack, elements_count, context,
                                                 VISIT_TAG_OBJECT_KV),
