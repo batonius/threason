@@ -46,6 +46,21 @@ static long long thsn_atoll_checked(ThsnSlice slice) {
     return result;
 }
 
+static ThsnResult thsn_atod_checked(ThsnSlice slice, double* result) {
+    BAIL_ON_NULL_INPUT(result);
+    const size_t MAX_DOUBLE_LEN = 128;
+    if (slice.size > MAX_DOUBLE_LEN) {
+        return THSN_RESULT_INPUT_ERROR;
+    }
+    char double_str[MAX_DOUBLE_LEN + 1];
+    memcpy(double_str, slice.data, slice.size);
+    double_str[slice.size] = '\0';
+    char* double_str_end = NULL;
+    *result = strtod(double_str, &double_str_end);
+    return double_str_end == double_str ? THSN_RESULT_INPUT_ERROR
+                                        : THSN_RESULT_SUCCESS;
+}
+
 int thsn_parser_compare_kv_keys(const void* a, const void* b, void* data) {
     size_t a_offset;
     size_t b_offset;
@@ -113,9 +128,11 @@ static ThsnResult thsn_parser_parse_value(ThsnToken token,
         case THSN_TOKEN_INT:
             return thsn_vector_store_int(result_vector,
                                          thsn_atoll_checked(token_slice));
-        case THSN_TOKEN_FLOAT:
-            // TODO
-            return THSN_RESULT_INPUT_ERROR;
+        case THSN_TOKEN_FLOAT: {
+            double value;
+            BAIL_ON_ERROR(thsn_atod_checked(token_slice, &value));
+            return thsn_vector_store_double(result_vector, value);
+        }
         case THSN_TOKEN_STRING:
             return thsn_vector_store_string(result_vector, token_slice);
         case THSN_TOKEN_OPEN_BRACKET:

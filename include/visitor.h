@@ -22,8 +22,8 @@ typedef struct {
 typedef struct {
     ThsnVisitorResult (*visit_integer)(ThsnVisitorContext* context,
                                        void* user_data, long long value);
-    ThsnVisitorResult (*visit_float)(ThsnVisitorContext* context,
-                                     void* user_data, double value);
+    ThsnVisitorResult (*visit_double)(ThsnVisitorContext* context,
+                                      void* user_data, double value);
     ThsnVisitorResult (*visit_null)(ThsnVisitorContext* context,
                                     void* user_data);
     ThsnVisitorResult (*visit_bool)(ThsnVisitorContext* context,

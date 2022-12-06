@@ -136,9 +136,12 @@ ThsnResult thsn_visit(ThsnSlice parse_result, ThsnVisitorVTable* vtable,
                               value);
                 break;
             }
-            case THSN_TAG_DOUBLE:
-                // TODO
-                goto error_cleanup;
+            case THSN_TAG_DOUBLE: {
+                double value;
+                READ_SLICE_INTO_VAR(data_slice, value);
+                CALL_VISITOR3(vtable->visit_double, &context, user_data, value);
+                break;
+            }
             case THSN_TAG_ARRAY: {
                 CALL_VISITOR2(vtable->visit_array_start, &context, user_data);
                 if (skip) {

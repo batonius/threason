@@ -16,8 +16,8 @@ ThsnVisitorResult visit_integer(ThsnVisitorContext* context, void* user_data,
     return THSN_VISITOR_RESULT_CONTINUE;
 }
 
-ThsnVisitorResult visit_float(ThsnVisitorContext* context, void* user_data,
-                              double value) {
+ThsnVisitorResult visit_double(ThsnVisitorContext* context, void* user_data,
+                               double value) {
     (void)user_data;
     if (context->in_object) {
         printf("\"%.*s\": ", (int)context->key.size, context->key.data);
@@ -114,7 +114,7 @@ int main(int argc, char** argv) {
         .visit_null = visit_null,
         .visit_bool = visit_bool,
         .visit_integer = visit_integer,
-        .visit_float = visit_float,
+        .visit_double = visit_double,
         .visit_string = visit_string,
         .visit_array_start = visit_array_start,
         .visit_array_end = visit_array_end,
