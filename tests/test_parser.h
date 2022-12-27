@@ -1,5 +1,10 @@
+#ifndef THSN_TEST_PARSER_H
+#define THSN_TEST_PARSER_H
+
 #include "parser.h"
 #include "testing.h"
+
+// clang-format off
 
 #define ASSERT_PARSE_STRING_AS_BYTES(string)                            \
     do {                                                                \
@@ -28,6 +33,8 @@ TEST(scalar_values) {
     0x70 END_ASSERT_BYTES();
 }
 
-TEST_MAIN()
-TEST_SUITE("parser")
-scalar_values, END_TEST_SUITE() END_MAIN()
+TEST_SUITE(parser)
+    scalar_values, 
+END_TEST_SUITE()
+
+#endif

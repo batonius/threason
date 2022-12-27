@@ -1,5 +1,10 @@
+#ifndef THSN_TEST_TOKENIZER_H
+#define THSN_TEST_TOKENIZER_H
+
 #include "testing.h"
 #include "tokenizer.h"
+
+// clang-format off
 
 TEST(valid_tokens) {
     struct {
@@ -97,6 +102,9 @@ TEST(invalid_tokens) {
     }
 }
 
-TEST_MAIN()
-TEST_SUITE("tokenizer")
-valid_tokens, invalid_tokens, END_TEST_SUITE() END_MAIN()
+TEST_SUITE(tokenizer)
+    valid_tokens,
+    invalid_tokens, 
+END_TEST_SUITE()
+
+#endif

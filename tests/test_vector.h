@@ -1,3 +1,8 @@
+#ifndef THSN_TEST_VECTOR_H
+#define THSN_TEST_VECTOR_H
+
+// clang-format off
+
 #include "testing.h"
 #include "vector.h"
 
@@ -62,7 +67,12 @@ TEST(pushes_and_pops) {
     ASSERT_EQ(d, 4);
 }
 
-TEST_MAIN()
-TEST_SUITE("threadson vector")
-allocates_vector, frees_vector, grows_vector, shrinks_vector, pushes_and_pops,
-    END_TEST_SUITE() END_MAIN()
+TEST_SUITE(vector)
+    allocates_vector,
+    frees_vector,
+    grows_vector,
+    shrinks_vector,
+    pushes_and_pops,
+END_TEST_SUITE() 
+
+#endif

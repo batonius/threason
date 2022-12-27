@@ -126,28 +126,29 @@ typedef struct {
     while (0)
 
 #define TEST_SUITE(name)                                                  \
-    {                                                                     \
-        printf("Testing %s:\n", name);                                    \
+    void test_suite_##name(TestResult* final_results) {                   \
+        printf("Testing %s:\n", #name);                                   \
         TestResult suite_results = {.total_tests = 0, .failed_tests = 0}; \
         TestResult (*__test_functions[])() = {
-#define END_TEST_SUITE()                                                     \
-    }                                                                        \
-    ;                                                                        \
-    for (size_t i = 0;                                                       \
-         i < sizeof(__test_functions) / sizeof(*__test_functions); ++i) {    \
-        const TestResult test_result = __test_functions[i]();                \
-        printf("    %s: %zd/%zd\n", test_result.test_name,                   \
-               test_result.total_tests - test_result.failed_tests,           \
-               test_result.total_tests);                                     \
-        suite_results.total_tests += test_result.total_tests;                \
-        suite_results.failed_tests += test_result.failed_tests;              \
-    }                                                                        \
-    printf("Suite assertions %zd, failed %zd.\n", suite_results.total_tests, \
-           suite_results.failed_tests);                                      \
-    final_results.total_tests += suite_results.total_tests;                  \
-    final_results.failed_tests += suite_results.failed_tests;                \
-    }                                                                        \
-    ;
+#define END_TEST_SUITE()                                                       \
+    }                                                                          \
+    ;                                                                          \
+    for (size_t i = 0;                                                         \
+         i < sizeof(__test_functions) / sizeof(*__test_functions); ++i) {      \
+        const TestResult test_result = __test_functions[i]();                  \
+        printf("    %s: %zd/%zd\n", test_result.test_name,                     \
+               test_result.total_tests - test_result.failed_tests,             \
+               test_result.total_tests);                                       \
+        suite_results.total_tests += test_result.total_tests;                  \
+        suite_results.failed_tests += test_result.failed_tests;                \
+    }                                                                          \
+    printf("Suite assertions %zd, failed %zd.\n\n", suite_results.total_tests, \
+           suite_results.failed_tests);                                        \
+    final_results->total_tests += suite_results.total_tests;                   \
+    final_results->failed_tests += suite_results.failed_tests;                 \
+    }
+
+#define RUN_SUITE(name) test_suite_##name(&final_results)
 
 #define TEST_MAIN()                   \
     int main(int argc, char** argv) { \

@@ -1,3 +1,8 @@
+#ifndef THSN_TEST_TAGS_H
+#define THSN_TEST_TAGS_H
+
+// clang-format off
+
 #include <string.h>
 
 #include "tags.h"
@@ -81,7 +86,11 @@ TEST(stores_strings) {
               0);
 }
 
-TEST_MAIN()
-TEST_SUITE("tags")
-stores_null, stores_bools, stores_ints, stores_strings,
-    END_TEST_SUITE() END_MAIN()
+TEST_SUITE(tags)
+    stores_null,
+    stores_bools, 
+    stores_ints, 
+    stores_strings,
+END_TEST_SUITE()
+
+#endif

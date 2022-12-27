@@ -1,9 +1,10 @@
 #ifndef THSN_TAGS_H
 #define THSN_TAGS_H
 
+#include <stdbool.h>
+
 #include "result.h"
 #include "slice.h"
-#include "stdbool.h"
 #include "vector.h"
 
 typedef enum {
