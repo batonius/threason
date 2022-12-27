@@ -13,5 +13,5 @@ ThsnResult thsn_vector_shrink(ThsnVector* /*in/out*/ vector,
 ThsnResult thsn_vector_push(ThsnVector* /*in/out*/ vector,
                             ThsnSlice /*in*/ slice);
 
-ThsnResult thsn_vector_pop(ThsnVector* /*in/out*/ vector,
-                           ThsnSlice /*out*/ slice);
+ThsnResult thsn_vector_pop(ThsnVector* /*in/out*/ vector, char* data,
+                           size_t size);

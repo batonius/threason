@@ -6,7 +6,7 @@
 
 typedef struct {
     size_t size;
-    char* data;
+    const char* data;
 } ThsnSlice;
 
 #define THSN_SLICE_MAKE_EMPTY() \

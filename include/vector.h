@@ -44,7 +44,7 @@ typedef struct {
         : THSN_RESULT_INPUT_ERROR
 
 #define THSN_VECTOR_POP_VAR(vector, var) \
-    thsn_vector_pop(&(vector), THSN_SLICE_FROM_VAR(var))
+    thsn_vector_pop(&(vector), (char*)&(var), sizeof(var))
 
 #define THSN_VECTOR_POP_2_VARS(vector, var1, var2)               \
     THSN_VECTOR_POP_VAR((vector), (var1)) == THSN_RESULT_SUCCESS \
@@ -120,11 +120,11 @@ inline ThsnResult thsn_vector_push(ThsnVector* /*in/out*/ vector,
     return THSN_RESULT_SUCCESS;
 }
 
-inline ThsnResult thsn_vector_pop(ThsnVector* /*in/out*/ vector,
-                                  ThsnSlice /*out*/ slice) {
+inline ThsnResult thsn_vector_pop(ThsnVector* /*in/out*/ vector, char* data,
+                                  size_t size) {
     BAIL_ON_NULL_INPUT(vector);
-    BAIL_ON_NULL_INPUT(slice.data);
-    BAIL_ON_ERROR(thsn_vector_shrink(vector, slice.size));
-    memcpy(slice.data, THSN_VECTOR_AT_CURRENT_OFFSET(*vector), slice.size);
+    BAIL_ON_NULL_INPUT(data);
+    BAIL_ON_ERROR(thsn_vector_shrink(vector, size));
+    memcpy(data, THSN_VECTOR_AT_CURRENT_OFFSET(*vector), size);
     return THSN_RESULT_SUCCESS;
 }

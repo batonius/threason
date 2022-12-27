@@ -103,11 +103,11 @@ int thsn_parser_compare_kv_keys(const void* a, const void* b, void* data) {
     }
 }
 
-static ThsnResult thsn_parser_sort_elements_table(
-    ThsnSlice elements_table_slice, ThsnVector* result_vector) {
-    qsort_r(elements_table_slice.data,
-            elements_table_slice.size / sizeof(size_t), sizeof(size_t),
-            thsn_parser_compare_kv_keys, result_vector);
+static ThsnResult thsn_parser_sort_elements_table(char* elements_table_data,
+                                                  size_t elements_table_size,
+                                                  ThsnVector* result_vector) {
+    qsort_r(elements_table_data, elements_table_size / sizeof(size_t),
+            sizeof(size_t), thsn_parser_compare_kv_keys, result_vector);
     return THSN_RESULT_SUCCESS;
 }
 
@@ -186,15 +186,16 @@ static ThsnResult thsn_parser_store_composite_elements_table(
     BAIL_ON_ERROR(
         thsn_vector_shrink(&parser_status->stack, elements_offsets_table_size));
     size_t elements_offsets_table_offset = THSN_VECTOR_OFFSET(*result_vector);
-    ThsnSlice elements_offsets_table_slice =
-        THSN_SLICE_MAKE(THSN_VECTOR_AT_CURRENT_OFFSET(parser_status->stack),
-                        elements_offsets_table_size);
+    char* elements_offsets_table =
+        THSN_VECTOR_AT_CURRENT_OFFSET(parser_status->stack);
     if (sort_as_kv) {
         BAIL_ON_ERROR(thsn_parser_sort_elements_table(
-            elements_offsets_table_slice, result_vector));
+            elements_offsets_table, elements_offsets_table_size,
+            result_vector));
     }
-    BAIL_ON_ERROR(
-        thsn_vector_push(result_vector, elements_offsets_table_slice));
+    BAIL_ON_ERROR(thsn_vector_push(
+        result_vector,
+        THSN_SLICE_MAKE(elements_offsets_table, elements_offsets_table_size)));
     size_t composite_header_offset;
     BAIL_ON_ERROR(
         THSN_VECTOR_POP_VAR(parser_status->stack, composite_header_offset));
