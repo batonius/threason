@@ -1,4 +1,5 @@
-#pragma once
+#ifndef THSN_RESULT_H
+#define THSN_RESULT_H
 
 typedef enum {
     THSN_RESULT_SUCCESS,
@@ -34,3 +35,5 @@ typedef enum {
             goto label;                   \
         }                                 \
     } while (0)
+
+#endif

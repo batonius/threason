@@ -1,4 +1,5 @@
-#pragma once
+#ifndef THSN_TAGS_H
+#define THSN_TAGS_H
 
 #include "result.h"
 #include "slice.h"
@@ -152,3 +153,5 @@ inline ThsnResult thsn_slice_read_string(ThsnSlice stored_string_slice,
     }
     return THSN_RESULT_SUCCESS;
 }
+
+#endif

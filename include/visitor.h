@@ -1,4 +1,5 @@
-#pragma once
+#ifndef THSN_VISITOR_H
+#define THSN_VISITOR_H
 
 #include <stdbool.h>
 
@@ -45,3 +46,5 @@ typedef struct {
 
 ThsnResult thsn_visit(ThsnSlice parsed_data, ThsnVisitorVTable* vtable,
                       void* user_data);
+
+#endif

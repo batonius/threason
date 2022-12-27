@@ -1,4 +1,5 @@
-#pragma once
+#ifndef THSN_VECTOR_H
+#define THSN_VECTOR_H
 
 #include <stdint.h>
 #include <stdlib.h>
@@ -128,3 +129,5 @@ inline ThsnResult thsn_vector_pop(ThsnVector* /*in/out*/ vector, char* data,
     memcpy(data, THSN_VECTOR_AT_CURRENT_OFFSET(*vector), size);
     return THSN_RESULT_SUCCESS;
 }
+
+#endif

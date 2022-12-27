@@ -1,4 +1,5 @@
-#pragma once
+#ifndef THSN_SLICE_H
+#define THSN_SLICE_H
 
 #include <stdbool.h>
 #include <stdlib.h>
@@ -22,6 +23,8 @@ inline ThsnSlice thsn_slice_make(const char* data, size_t size) {
 inline ThsnSlice thsn_slice_from_c_str(const char* data) {
     return (ThsnSlice){.data = data, .size = strlen(data)};
 }
+
+#define THSN_SLICE_FROM_VAR(v) thsn_slice_make((const char*)&(v), sizeof(v))
 
 inline ThsnResult thsn_slice_at_offset(ThsnSlice base_slice, size_t offset,
                                        size_t min_size,
@@ -47,4 +50,4 @@ inline char thsn_slice_advance_char_unsafe(ThsnSlice* /*in/out*/ slice) {
     return *slice->data++;
 }
 
-#define THSN_SLICE_FROM_VAR(v) thsn_slice_make((const char*)&(v), sizeof(v))
+#endif

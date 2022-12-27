@@ -1,4 +1,5 @@
-#pragma once
+#ifndef THSN_TOKENIZER_H
+#define THSN_TOKENIZER_H
 
 #include <ctype.h>
 #include <stdbool.h>
@@ -28,3 +29,5 @@ typedef enum {
 ThsnResult thsn_next_token(ThsnSlice* restrict /*in/out*/ buffer_slice,
                            ThsnSlice* restrict /*out*/ token_slice,
                            ThsnToken* /*out*/ token);
+
+#endif

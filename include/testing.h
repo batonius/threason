@@ -1,4 +1,5 @@
-#pragma once
+#ifndef THSN_TESTING_H
+#define THSN_TESTING_H
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -241,3 +242,5 @@ typedef struct {
     }                                                                       \
     }                                                                       \
     ;
+
+#endif
