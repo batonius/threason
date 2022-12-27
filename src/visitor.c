@@ -1,3 +1,4 @@
+#include "slice.h"
 #include "tags.h"
 #include "vector.h"
 #include "visitor.h"
@@ -43,21 +44,21 @@ ThsnResult thsn_visit(ThsnSlice parse_result, ThsnVisitorVTable* vtable,
         }                                                               \
     } while (0)
 
-#define READ_SLICE_INTO_VAR(slice, var)                  \
-    do {                                                 \
-        if ((slice).size < sizeof(var)) {                \
-            goto error_cleanup;                          \
-        }                                                \
-        memcpy(&(var), (slice).data, sizeof(var));       \
-        THSN_SLICE_ADVANCE_UNSAFE((slice), sizeof(var)); \
+#define READ_SLICE_INTO_VAR(slice, var)                   \
+    do {                                                  \
+        if ((slice).size < sizeof(var)) {                 \
+            goto error_cleanup;                           \
+        }                                                 \
+        memcpy(&(var), (slice).data, sizeof(var));        \
+        thsn_slice_advance_unsafe(&(slice), sizeof(var)); \
     } while (0)
 
-    if (THSN_SLICE_EMPTY(parse_result)) {
+    if (thsn_slice_is_empty(parse_result)) {
         return THSN_RESULT_SUCCESS;
     }
 
     ThsnVisitorContext context = {
-        .key = THSN_SLICE_MAKE_EMPTY(),
+        .key = thsn_slice_make_empty(),
         .in_array = false,
         .last = false,
     };
@@ -74,7 +75,7 @@ ThsnResult thsn_visit(ThsnSlice parse_result, ThsnVisitorVTable* vtable,
                                            sizeof(char), &data_slice),
                       error_cleanup);
 
-        char tag = THSN_SLICE_NEXT_CHAR_UNSAFE(data_slice);
+        char tag = thsn_slice_advance_char_unsafe(&data_slice);
         switch (THSN_TAG_TYPE(tag)) {
             case THSN_TAG_NULL:
                 CALL_VISITOR2(vtable->visit_null, &context, user_data);
@@ -89,11 +90,11 @@ ThsnResult thsn_visit(ThsnSlice parse_result, ThsnVisitorVTable* vtable,
                     goto error_cleanup;
                 }
                 CALL_VISITOR3(vtable->visit_string, &context, user_data,
-                              THSN_SLICE_MAKE(data_slice.data, string_size));
+                              thsn_slice_make(data_slice.data, string_size));
                 break;
             }
             case THSN_TAG_REF_STRING: {
-                ThsnSlice string_slice = THSN_SLICE_MAKE_EMPTY();
+                ThsnSlice string_slice = thsn_slice_make_empty();
 
                 if (THSN_TAG_SIZE(tag) != THSN_TAG_SIZE_EMPTY) {
                     READ_SLICE_INTO_VAR(data_slice, string_slice);
@@ -228,7 +229,7 @@ ThsnResult thsn_visit(ThsnSlice parse_result, ThsnVisitorVTable* vtable,
                     context.in_object = false;
                     context.in_array = true;
                     context.last = elements_count == 0;
-                    context.key = THSN_SLICE_MAKE_EMPTY();
+                    context.key = thsn_slice_make_empty();
                     found_offset = true;
                     break;
                 }
@@ -267,7 +268,7 @@ ThsnResult thsn_visit(ThsnSlice parse_result, ThsnVisitorVTable* vtable,
                     GOTO_ON_ERROR(thsn_slice_at_offset(parse_result, kv_offset,
                                                        sizeof(char), &kv_slice),
                                   error_cleanup);
-                    ThsnSlice key_slice = THSN_SLICE_MAKE_EMPTY();
+                    ThsnSlice key_slice = thsn_slice_make_empty();
                     size_t value_offset = 0;
                     GOTO_ON_ERROR(thsn_slice_read_string(kv_slice, &key_slice,
                                                          &value_offset),

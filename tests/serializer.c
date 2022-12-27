@@ -140,7 +140,7 @@ int main(int argc, char** argv) {
             break;
         }
         if (thsn_vector_push(&input_data,
-                             THSN_SLICE_MAKE(buffer, read_result)) !=
+                             thsn_slice_make(buffer, read_result)) !=
             THSN_RESULT_SUCCESS) {
             fprintf(stderr, "Can't append to input storage\n");
             goto error_cleanup;

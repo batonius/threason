@@ -1,6 +1,7 @@
 #include <stdlib.h>
 
 #include "parser.h"
+#include "slice.h"
 #include "tags.h"
 #include "tokenizer.h"
 
@@ -22,11 +23,11 @@ typedef struct {
 
 static long long thsn_atoll_checked(ThsnSlice slice) {
     long long result = 0;
-    if (!THSN_SLICE_EMPTY(slice)) {
+    if (!thsn_slice_is_empty(slice)) {
         bool sign = true;
-        char c = THSN_SLICE_NEXT_CHAR_UNSAFE(slice);
+        char c = thsn_slice_advance_char_unsafe(&slice);
         if (c == '-') {
-            if (THSN_SLICE_EMPTY(slice)) {
+            if (thsn_slice_is_empty(slice)) {
                 return 0;
             }
             sign = false;
@@ -34,8 +35,8 @@ static long long thsn_atoll_checked(ThsnSlice slice) {
             result = c - '0';
         }
 
-        while (!THSN_SLICE_EMPTY(slice)) {
-            c = THSN_SLICE_NEXT_CHAR_UNSAFE(slice);
+        while (!thsn_slice_is_empty(slice)) {
+            c = thsn_slice_advance_char_unsafe(&slice);
             result = result * 10 + (c - '0');
         }
 
@@ -195,7 +196,7 @@ static ThsnResult thsn_parser_store_composite_elements_table(
     }
     BAIL_ON_ERROR(thsn_vector_push(
         result_vector,
-        THSN_SLICE_MAKE(elements_offsets_table, elements_offsets_table_size)));
+        thsn_slice_make(elements_offsets_table, elements_offsets_table_size)));
     size_t composite_header_offset;
     BAIL_ON_ERROR(
         THSN_VECTOR_POP_VAR(parser_status->stack, composite_header_offset));
@@ -216,7 +217,7 @@ static ThsnResult thsn_parser_parse_first_array_element(
         parser_status->state = THSN_PARSER_STATE_FINISH;
         return thsn_vector_store_tagged_value(
             result_vector, THSN_TAG_MAKE(THSN_TAG_ARRAY, THSN_TAG_SIZE_EMPTY),
-            THSN_SLICE_MAKE_EMPTY());
+            thsn_slice_make_empty());
     }
     BAIL_ON_ERROR(thsn_parser_store_composite_header(
         parser_status, result_vector,
@@ -272,7 +273,7 @@ static ThsnResult thsn_parser_parse_first_kv(ThsnToken token,
         parser_status->state = THSN_PARSER_STATE_FINISH;
         return thsn_vector_store_tagged_value(
             result_vector, THSN_TAG_MAKE(THSN_TAG_OBJECT, THSN_TAG_SIZE_EMPTY),
-            THSN_SLICE_MAKE_EMPTY());
+            thsn_slice_make_empty());
     }
     if (token != THSN_TOKEN_STRING) {
         return THSN_RESULT_INPUT_ERROR;

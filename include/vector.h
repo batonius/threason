@@ -28,7 +28,7 @@ typedef struct {
 #define THSN_VECTOR_EMPTY(vector) ((vector).offset == 0)
 
 #define THSN_VECTOR_AS_SLICE(vector) \
-    THSN_SLICE_MAKE((vector).buffer, (vector).offset)
+    thsn_slice_make((vector).buffer, (vector).offset)
 
 #define THSN_VECTOR_PUSH_VAR(vector, var) \
     thsn_vector_push(&(vector), THSN_SLICE_FROM_VAR(var))

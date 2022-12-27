@@ -52,7 +52,7 @@ inline ThsnResult thsn_vector_store_tagged_value(ThsnVector* /*in/out*/ vector,
 
 inline ThsnResult thsn_vector_store_null(ThsnVector* /*in/out*/ vector) {
     return thsn_vector_store_tagged_value(
-        vector, THSN_TAG_MAKE(THSN_TAG_NULL, 0), THSN_SLICE_MAKE_EMPTY());
+        vector, THSN_TAG_MAKE(THSN_TAG_NULL, 0), thsn_slice_make_empty());
 }
 
 inline ThsnResult thsn_vector_store_bool(ThsnVector* /*in/out*/ vector,
@@ -61,7 +61,7 @@ inline ThsnResult thsn_vector_store_bool(ThsnVector* /*in/out*/ vector,
         vector,
         THSN_TAG_MAKE(THSN_TAG_BOOL,
                       value ? THSN_TAG_SIZE_TRUE : THSN_TAG_SIZE_FALSE),
-        THSN_SLICE_MAKE_EMPTY());
+        thsn_slice_make_empty());
 }
 
 inline ThsnResult thsn_vector_store_double(ThsnVector* /*in/out*/ vector,
@@ -76,7 +76,7 @@ inline ThsnResult thsn_vector_store_int(ThsnVector* /*in/out*/ vector,
     if (value == 0) {
         return thsn_vector_store_tagged_value(
             vector, THSN_TAG_MAKE(THSN_TAG_INT, THSN_TAG_SIZE_ZERO),
-            THSN_SLICE_MAKE_EMPTY());
+            thsn_slice_make_empty());
     }
     if (value <= INT8_MAX && value >= INT8_MIN) {
         const int8_t int8_value = (int8_t)value;
@@ -120,8 +120,8 @@ inline ThsnResult thsn_slice_read_string(ThsnSlice stored_string_slice,
     if (stored_string_slice.size < sizeof(char)) {
         return THSN_RESULT_INPUT_ERROR;
     }
-    char key_str_tag = THSN_SLICE_NEXT_CHAR_UNSAFE(stored_string_slice);
-    *string_slice = THSN_SLICE_MAKE_EMPTY();
+    char key_str_tag = thsn_slice_advance_char_unsafe(&stored_string_slice);
+    *string_slice = thsn_slice_make_empty();
     switch (THSN_TAG_TYPE(key_str_tag)) {
         case THSN_TAG_REF_STRING:
             if (THSN_TAG_SIZE(key_str_tag) != THSN_TAG_SIZE_EMPTY) {
@@ -141,7 +141,7 @@ inline ThsnResult thsn_slice_read_string(ThsnSlice stored_string_slice,
                 return THSN_RESULT_INPUT_ERROR;
             }
             *string_slice =
-                THSN_SLICE_MAKE(stored_string_slice.data, key_str_size);
+                thsn_slice_make(stored_string_slice.data, key_str_size);
             if (stored_length != NULL) {
                 *stored_length = sizeof(ThsnTag) + key_str_size;
             }
