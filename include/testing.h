@@ -81,6 +81,8 @@ typedef struct {
 
 #define ASSERT_SUCCESS(v) ASSERT_EQ((v), THSN_RESULT_SUCCESS)
 
+#define ASSERT_INPUT_ERROR(v) ASSERT_EQ((v), THSN_RESULT_INPUT_ERROR)
+
 #define ASSERT_SLICE_EQ_BYTES(slice_)     \
     do {                                  \
         ++test_result->total_tests;       \

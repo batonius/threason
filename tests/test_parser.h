@@ -4,13 +4,12 @@
 #include "parser.h"
 #include "testing.h"
 
-// clang-format off
-
 #define ASSERT_PARSE_STRING_AS_BYTES(string)                            \
     do {                                                                \
         ThsnVector result_vector = THSN_VECTOR_INIT();                  \
         ASSERT_SUCCESS(thsn_vector_make(&result_vector, 1024));         \
-        ThsnSlice input_slice = thsn_slice_from_c_str((string));        \
+        ThsnSlice input_slice;                                          \
+        ASSERT_SUCCESS(thsn_slice_from_c_str((string), &input_slice));  \
         ASSERT_SUCCESS(thsn_parse_value(&input_slice, &result_vector)); \
     ASSERT_SLICE_EQ_BYTES(THSN_VECTOR_AS_SLICE(result_vector))
 
@@ -19,6 +18,8 @@
     thsn_vector_free(&result_vector); \
     }                                 \
     while (0)
+
+// clang-format off
 
 TEST(scalar_values) {
     ASSERT_PARSE_STRING_AS_BYTES("1") 0x41, 0x01 END_ASSERT_BYTES();

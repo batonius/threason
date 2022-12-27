@@ -7,7 +7,8 @@ ThsnSlice thsn_slice_make_empty();
 
 ThsnSlice thsn_slice_make(const char* data, size_t size);
 
-ThsnSlice thsn_slice_from_c_str(const char* data);
+ThsnResult thsn_slice_from_c_str(const char* data,
+                                 ThsnSlice* /*out*/ result_slice);
 
 bool thsn_slice_is_empty(ThsnSlice slice);
 

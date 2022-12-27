@@ -1,8 +1,6 @@
 #ifndef THSN_TEST_TAGS_H
 #define THSN_TEST_TAGS_H
 
-// clang-format off
-
 #include <string.h>
 
 #include "tags.h"
@@ -69,13 +67,13 @@ TEST(stores_strings) {
     char* short_string = "a short string";
     char* long_string = "a somewhat longer yet not very long string";
     ThsnVector vector = THSN_VECTOR_INIT();
-    ThsnSlice short_string_slice = thsn_slice_from_c_str(short_string);
-    ThsnSlice long_string_slice = thsn_slice_from_c_str(long_string);
+    ThsnSlice short_string_slice;
+    ThsnSlice long_string_slice;
+    ASSERT_SUCCESS(thsn_slice_from_c_str(short_string, &short_string_slice));
+    ASSERT_SUCCESS(thsn_slice_from_c_str(long_string, &long_string_slice));
     ASSERT_SUCCESS(thsn_vector_make(&vector, 1024));
-    ASSERT_SUCCESS(
-        thsn_vector_store_string(&vector, thsn_slice_from_c_str(short_string)));
-    ASSERT_SUCCESS(
-        thsn_vector_store_string(&vector, thsn_slice_from_c_str(long_string)));
+    ASSERT_SUCCESS(thsn_vector_store_string(&vector, short_string_slice));
+    ASSERT_SUCCESS(thsn_vector_store_string(&vector, long_string_slice));
     ASSERT_EQ(vector.buffer[0],
               THSN_TAG_MAKE(THSN_TAG_SMALL_STRING, short_string_slice.size));
     ASSERT_STRN_EQ(vector.buffer + 1, short_string, short_string_slice.size);
@@ -85,6 +83,8 @@ TEST(stores_strings) {
                      &long_string_slice, sizeof(long_string_slice)),
               0);
 }
+
+// clang-format off
 
 TEST_SUITE(tags)
     stores_null,
