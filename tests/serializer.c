@@ -128,8 +128,8 @@ int main(int argc, char** argv) {
         file = fopen(argv[1], "rb");
     }
 
-    ThsnVector input_data = THSN_VECTOR_INIT();
-    if (thsn_vector_make(&input_data, 1024) != THSN_RESULT_SUCCESS) {
+    ThsnVector input_data = thsn_vector_make_empty();
+    if (thsn_vector_allocate(&input_data, 1024) != THSN_RESULT_SUCCESS) {
         fprintf(stderr, "Can't allocate input storage\n");
         goto error_cleanup;
     }
@@ -147,19 +147,19 @@ int main(int argc, char** argv) {
         }
     }
 
-    ThsnVector parse_result = THSN_VECTOR_INIT();
-    if (thsn_vector_make(&parse_result, 1024) != THSN_RESULT_SUCCESS) {
+    ThsnVector parse_result = thsn_vector_make_empty();
+    if (thsn_vector_allocate(&parse_result, 1024) != THSN_RESULT_SUCCESS) {
         fprintf(stderr, "Can't allocate parse result storage\n");
         goto error_cleanup;
     }
-    ThsnSlice input_slice = THSN_VECTOR_AS_SLICE(input_data);
+    ThsnSlice input_slice = thsn_vector_as_slice(input_data);
     if (thsn_parse_value(&input_slice, &parse_result) != THSN_RESULT_SUCCESS) {
         fprintf(stderr, "Can't parse input string\n");
         goto error_cleanup;
     }
     fprintf(stderr, "Parse result size: %zu\n",
-            THSN_VECTOR_OFFSET(parse_result));
-    if (thsn_visit(THSN_VECTOR_AS_SLICE(parse_result), &visitor_vtable, NULL) !=
+            thsn_vector_current_offset(parse_result));
+    if (thsn_visit(thsn_vector_as_slice(parse_result), &visitor_vtable, NULL) !=
         THSN_RESULT_SUCCESS) {
         fprintf(stderr, "\nCan't visit parse result\n");
         goto error_cleanup;

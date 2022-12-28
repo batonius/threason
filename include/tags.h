@@ -41,9 +41,12 @@ inline ThsnResult thsn_vector_store_tagged_value(ThsnVector* /*in/out*/ vector,
     if (value_slice.size > 0) {
         BAIL_ON_NULL_INPUT(value_slice.data);
     }
-    size_t allocation_offset = THSN_VECTOR_OFFSET(*vector);
-    BAIL_ON_ERROR(thsn_vector_grow(vector, sizeof(tag) + value_slice.size));
-    char* allocated_data = THSN_VECTOR_AT_OFFSET(*vector, allocation_offset);
+    size_t allocation_offset;
+    BAIL_ON_ERROR(thsn_vector_grow(vector, sizeof(tag) + value_slice.size,
+                                   &allocation_offset));
+    char* allocated_data;
+    BAIL_ON_ERROR(thsn_vector_data_at_offset(*vector, allocation_offset,
+                                             sizeof(tag), &allocated_data));
     memcpy(allocated_data, &tag, sizeof(tag));
     allocated_data += sizeof(tag);
     if (value_slice.size > 0) {

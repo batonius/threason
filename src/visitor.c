@@ -63,8 +63,8 @@ ThsnResult thsn_visit(ThsnSlice parse_result, ThsnVisitorVTable* vtable,
         .last = false,
     };
 
-    ThsnVector stack = THSN_VECTOR_INIT();
-    BAIL_ON_ERROR(thsn_vector_make(&stack, 1024));
+    ThsnVector stack = thsn_vector_make_empty();
+    BAIL_ON_ERROR(thsn_vector_allocate(&stack, 1024));
     bool skip = false;
     size_t next_offset = 0;
     bool done_visiting = false;
@@ -185,7 +185,7 @@ ThsnResult thsn_visit(ThsnSlice parse_result, ThsnVisitorVTable* vtable,
 
         bool found_offset = false;
         do {
-            if (THSN_VECTOR_EMPTY(stack)) {
+            if (thsn_vector_is_empty(stack)) {
                 done_visiting = true;
                 break;
             }

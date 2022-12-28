@@ -12,6 +12,11 @@ typedef struct {
     const char* data;
 } ThsnSlice;
 
+typedef struct {
+    size_t size;
+    char* data;
+} ThsnMutSlice;
+
 inline ThsnSlice thsn_slice_make_empty() {
     return (ThsnSlice){.data = NULL, .size = 0};
 }
@@ -51,6 +56,37 @@ inline void thsn_slice_advance_unsafe(ThsnSlice* /*in/out*/ slice,
 inline char thsn_slice_advance_char_unsafe(ThsnSlice* /*in/out*/ slice) {
     --slice->size;
     return *slice->data++;
+}
+
+inline ThsnMutSlice thsn_mut_slice_make(char* data, size_t size) {
+    return (ThsnMutSlice){.data = data, .size = size};
+}
+
+inline ThsnResult thsn_mut_slice_write(ThsnMutSlice* /*in/out*/ mut_slice,
+                                       ThsnSlice data_slice) {
+    if (mut_slice->size < data_slice.size) {
+        return THSN_RESULT_INPUT_ERROR;
+    }
+
+    memcpy(mut_slice->data, data_slice.data, data_slice.size);
+    mut_slice->data += data_slice.size;
+    mut_slice->size -= data_slice.size;
+    return THSN_RESULT_SUCCESS;
+}
+
+#define THSN_MUT_SLICE_COPY_VAR(mut_slice, var) \
+    thsn_mut_slice_write(&mut_slice, THSN_SLICE_FROM_VAR(var))
+
+inline ThsnResult thsn_slice_read(ThsnSlice* data_slice,
+                                  ThsnMutSlice mut_slice) {
+    if (mut_slice.size > data_slice->size) {
+        return THSN_RESULT_INPUT_ERROR;
+    }
+
+    memcpy(mut_slice.data, data_slice->data, mut_slice.size);
+    data_slice->data += mut_slice.size;
+    data_slice->size += mut_slice.size;
+    return THSN_RESULT_SUCCESS;
 }
 
 #endif

@@ -7,8 +7,8 @@
 #include "testing.h"
 
 TEST(stores_null) {
-    ThsnVector vector = THSN_VECTOR_INIT();
-    ASSERT_SUCCESS(thsn_vector_make(&vector, 1024));
+    ThsnVector vector = thsn_vector_make_empty();
+    ASSERT_SUCCESS(thsn_vector_allocate(&vector, 1024));
     ASSERT_SUCCESS(thsn_vector_store_null(&vector));
     ASSERT_EQ(vector.offset, 1);
     ASSERT_EQ(vector.buffer[0],
@@ -16,8 +16,8 @@ TEST(stores_null) {
 }
 
 TEST(stores_bools) {
-    ThsnVector vector = THSN_VECTOR_INIT();
-    ASSERT_SUCCESS(thsn_vector_make(&vector, 1024));
+    ThsnVector vector = thsn_vector_make_empty();
+    ASSERT_SUCCESS(thsn_vector_allocate(&vector, 1024));
     ASSERT_SUCCESS(thsn_vector_store_bool(&vector, true));
     ASSERT_SUCCESS(thsn_vector_store_bool(&vector, false));
     ASSERT_SUCCESS(thsn_vector_store_bool(&vector, false));
@@ -38,8 +38,8 @@ TEST(stores_ints) {
     int16_t b;
     int32_t c;
     int64_t d;
-    ThsnVector vector = THSN_VECTOR_INIT();
-    ASSERT_SUCCESS(thsn_vector_make(&vector, 1024));
+    ThsnVector vector = thsn_vector_make_empty();
+    ASSERT_SUCCESS(thsn_vector_allocate(&vector, 1024));
     ASSERT_SUCCESS(thsn_vector_store_int(&vector, 123));
     ASSERT_SUCCESS(thsn_vector_store_int(&vector, 12345));
     ASSERT_SUCCESS(thsn_vector_store_int(&vector, 1234567));
@@ -66,12 +66,12 @@ TEST(stores_ints) {
 TEST(stores_strings) {
     char* short_string = "a short string";
     char* long_string = "a somewhat longer yet not very long string";
-    ThsnVector vector = THSN_VECTOR_INIT();
+    ThsnVector vector = thsn_vector_make_empty();
     ThsnSlice short_string_slice;
     ThsnSlice long_string_slice;
     ASSERT_SUCCESS(thsn_slice_from_c_str(short_string, &short_string_slice));
     ASSERT_SUCCESS(thsn_slice_from_c_str(long_string, &long_string_slice));
-    ASSERT_SUCCESS(thsn_vector_make(&vector, 1024));
+    ASSERT_SUCCESS(thsn_vector_allocate(&vector, 1024));
     ASSERT_SUCCESS(thsn_vector_store_string(&vector, short_string_slice));
     ASSERT_SUCCESS(thsn_vector_store_string(&vector, long_string_slice));
     ASSERT_EQ(vector.buffer[0],

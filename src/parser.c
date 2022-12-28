@@ -70,11 +70,11 @@ int thsn_parser_compare_kv_keys(const void* a, const void* b, void* data) {
     ThsnVector* result_vector = (ThsnVector*)data;
     ThsnSlice a_key_slice;
     ThsnSlice b_key_slice;
-    if (thsn_slice_at_offset(THSN_VECTOR_AS_SLICE(*result_vector), a_offset, 1,
+    if (thsn_slice_at_offset(thsn_vector_as_slice(*result_vector), a_offset, 1,
                              &a_key_slice) != THSN_RESULT_SUCCESS) {
         return 0;
     }
-    if (thsn_slice_at_offset(THSN_VECTOR_AS_SLICE(*result_vector), b_offset, 1,
+    if (thsn_slice_at_offset(thsn_vector_as_slice(*result_vector), b_offset, 1,
                              &b_key_slice) != THSN_RESULT_SUCCESS) {
         return 0;
     }
@@ -149,15 +149,19 @@ static ThsnResult thsn_parser_parse_value(ThsnToken token,
 
 static ThsnResult thsn_parser_store_composite_header(
     ThsnParserStatus* parser_status, ThsnVector* result_vector, ThsnTag tag) {
-    size_t composite_header_size = sizeof(ThsnTag) + 2 * sizeof(size_t);
-    size_t composite_header_offset = THSN_VECTOR_OFFSET(*result_vector);
-    BAIL_ON_ERROR(thsn_vector_grow(result_vector, composite_header_size));
-    char* composite_header =
-        THSN_VECTOR_AT_OFFSET(*result_vector, composite_header_offset);
+    const size_t composite_header_size = sizeof(ThsnTag) + 2 * sizeof(size_t);
+    size_t composite_header_offset;
+    BAIL_ON_ERROR(thsn_vector_grow(result_vector, composite_header_size,
+                                   &composite_header_offset));
+    char* composite_header;
+    BAIL_ON_ERROR(thsn_vector_data_at_offset(*result_vector,
+                                             composite_header_offset,
+                                             sizeof(tag), &composite_header));
     memcpy(composite_header, &tag, sizeof(tag));
     composite_header_offset += sizeof(tag);
-    size_t first_element_offset = THSN_VECTOR_OFFSET(*result_vector);
-    size_t composite_elements_count = 1;
+    const size_t first_element_offset =
+        thsn_vector_current_offset(*result_vector);
+    const size_t composite_elements_count = 1;
     BAIL_ON_ERROR(THSN_VECTOR_PUSH_3_VARS(
         parser_status->stack, composite_header_offset, first_element_offset,
         composite_elements_count));
@@ -169,7 +173,7 @@ static ThsnResult thsn_parser_add_composite_element(
     size_t array_elements_count;
     BAIL_ON_ERROR(
         THSN_VECTOR_POP_VAR(parser_status->stack, array_elements_count));
-    size_t result_offset = THSN_VECTOR_OFFSET(*result_vector);
+    size_t result_offset = thsn_vector_current_offset(*result_vector);
     ++array_elements_count;
     BAIL_ON_ERROR(THSN_VECTOR_PUSH_2_VARS(parser_status->stack, result_offset,
                                           array_elements_count));
@@ -184,24 +188,33 @@ static ThsnResult thsn_parser_store_composite_elements_table(
         THSN_VECTOR_POP_VAR(parser_status->stack, composite_elements_count));
     size_t elements_offsets_table_size =
         composite_elements_count * sizeof(size_t);
-    BAIL_ON_ERROR(
-        thsn_vector_shrink(&parser_status->stack, elements_offsets_table_size));
-    size_t elements_offsets_table_offset = THSN_VECTOR_OFFSET(*result_vector);
-    char* elements_offsets_table =
-        THSN_VECTOR_AT_CURRENT_OFFSET(parser_status->stack);
+
+    size_t elements_offsets_table_offset;
+    BAIL_ON_ERROR(thsn_vector_shrink(&parser_status->stack,
+                                     elements_offsets_table_size,
+                                     &elements_offsets_table_offset));
+    char* elements_offsets_table;
+    BAIL_ON_ERROR(thsn_vector_data_at_offset(
+        parser_status->stack, elements_offsets_table_offset,
+        elements_offsets_table_size, &elements_offsets_table));
     if (sort_as_kv) {
         BAIL_ON_ERROR(thsn_parser_sort_elements_table(
             elements_offsets_table, elements_offsets_table_size,
             result_vector));
     }
+
     BAIL_ON_ERROR(thsn_vector_push(
         result_vector,
         thsn_slice_make(elements_offsets_table, elements_offsets_table_size)));
     size_t composite_header_offset;
     BAIL_ON_ERROR(
         THSN_VECTOR_POP_VAR(parser_status->stack, composite_header_offset));
-    char* composite_header =
-        THSN_VECTOR_AT_OFFSET(*result_vector, composite_header_offset);
+    char* composite_header;
+    BAIL_ON_ERROR(
+        thsn_vector_data_at_offset(*result_vector, composite_header_offset,
+                                   sizeof(composite_elements_count) +
+                                       sizeof(elements_offsets_table_offset),
+                                   &composite_header));
     memcpy(composite_header, &composite_elements_count,
            sizeof(composite_elements_count));
     composite_header += sizeof(composite_elements_count);
@@ -327,7 +340,7 @@ ThsnResult thsn_parse_value(ThsnSlice* /*in/out*/ buffer_slice,
     ThsnSlice token_slice;
     ThsnToken token;
     ThsnParserStatus parser_status = {.state = THSN_PARSER_STATE_VALUE};
-    BAIL_ON_ERROR(thsn_vector_make(&parser_status.stack, 1024));
+    BAIL_ON_ERROR(thsn_vector_allocate(&parser_status.stack, 1024));
 
     while (true) {
         GOTO_ON_ERROR(thsn_next_token(buffer_slice, &token_slice, &token),
@@ -380,7 +393,7 @@ ThsnResult thsn_parse_value(ThsnSlice* /*in/out*/ buffer_slice,
                 goto error_cleanup;
         }
         if (parser_status.state == THSN_PARSER_STATE_FINISH) {
-            if (THSN_VECTOR_EMPTY(parser_status.stack)) {
+            if (thsn_vector_is_empty(parser_status.stack)) {
                 break;
             }
             GOTO_ON_ERROR(

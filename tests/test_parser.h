@@ -6,20 +6,18 @@
 
 #define ASSERT_PARSE_STRING_AS_BYTES(string)                            \
     do {                                                                \
-        ThsnVector result_vector = THSN_VECTOR_INIT();                  \
-        ASSERT_SUCCESS(thsn_vector_make(&result_vector, 1024));         \
+        ThsnVector result_vector = thsn_vector_make_empty();            \
+        ASSERT_SUCCESS(thsn_vector_allocate(&result_vector, 1024));     \
         ThsnSlice input_slice;                                          \
         ASSERT_SUCCESS(thsn_slice_from_c_str((string), &input_slice));  \
         ASSERT_SUCCESS(thsn_parse_value(&input_slice, &result_vector)); \
-    ASSERT_SLICE_EQ_BYTES(THSN_VECTOR_AS_SLICE(result_vector))
+    ASSERT_SLICE_EQ_BYTES(thsn_vector_as_slice(result_vector))
 
 #define END_ASSERT_BYTES()            \
     END_BYTES();                      \
     thsn_vector_free(&result_vector); \
     }                                 \
     while (0)
-
-// clang-format off
 
 TEST(scalar_values) {
     ASSERT_PARSE_STRING_AS_BYTES("1") 0x41, 0x01 END_ASSERT_BYTES();
@@ -33,6 +31,8 @@ TEST(scalar_values) {
     ASSERT_PARSE_STRING_AS_BYTES("{}")
     0x70 END_ASSERT_BYTES();
 }
+
+// clang-format off
 
 TEST_SUITE(parser)
     scalar_values, 
