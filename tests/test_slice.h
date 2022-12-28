@@ -73,6 +73,51 @@ TEST(advances_slice_by_char) {
     ASSERT_EQ(array_slice.size, 1);
 }
 
+TEST(creates_mut_slice) {
+    char array[] = {1, 2, 3, 4};
+    ThsnMutSlice mut_slice = thsn_mut_slice_make(array, sizeof(array));
+    ASSERT_EQ(mut_slice.data, (char*)array);
+    ASSERT_EQ(mut_slice.size, sizeof(array));
+}
+
+TEST(creates_mut_slice_from_var) {
+    char array[10] = {0};
+    ThsnMutSlice mut_slice = THSN_MUT_SLICE_FROM_VAR(array);
+    ASSERT_EQ(mut_slice.data, (char*)array);
+    ASSERT_EQ(mut_slice.size, sizeof(array));
+}
+
+TEST(writes_to_mut_slice) {
+    char array[10] = {0};
+    char x = 123;
+    char y = 32;
+    ThsnMutSlice mut_slice = THSN_MUT_SLICE_FROM_VAR(array);
+    ASSERT_SUCCESS(thsn_mut_slice_write(&mut_slice, THSN_SLICE_FROM_VAR(x)));
+    ASSERT_EQ(array[0], x);
+    ASSERT_SUCCESS(THSN_MUT_SLICE_WRITE_VAR(mut_slice, y));
+    ASSERT_SUCCESS(THSN_MUT_SLICE_WRITE_VAR(mut_slice, y));
+    ASSERT_EQ(array[1], y);
+    ASSERT_EQ(array[2], y);
+    ASSERT_INPUT_ERROR(THSN_MUT_SLICE_WRITE_VAR(mut_slice, array));
+    ASSERT_EQ(mut_slice.data, &array[3]);
+    ASSERT_EQ(mut_slice.size, 7);
+}
+
+TEST(reads_from_slice) {
+    const char array[] = {1, 2, 3, 4, 5};
+    char x;
+    ThsnSlice slice = THSN_SLICE_FROM_VAR(array);
+    ASSERT_SUCCESS(thsn_slice_read(&slice, THSN_MUT_SLICE_FROM_VAR(x)));
+    ASSERT_EQ(x, 1);
+    ASSERT_SUCCESS(THSN_SLICE_READ_VAR(slice, x));
+    ASSERT_EQ(x, 2);
+    ASSERT_SUCCESS(THSN_SLICE_READ_VAR(slice, x));
+    ASSERT_EQ(x, 3);
+    ASSERT_INPUT_ERROR(THSN_SLICE_READ_VAR(slice, array));
+    ASSERT_EQ(slice.data, &array[3]);
+    ASSERT_EQ(slice.size, 2);
+}
+
 // clang-format off
 
 TEST_SUITE(slice)
@@ -84,6 +129,10 @@ TEST_SUITE(slice)
     checks_if_slice_is_empty,
     advances_slice,
     advances_slice_by_char,
+    creates_mut_slice,
+    creates_mut_slice_from_var,
+    writes_to_mut_slice,
+    reads_from_slice,
 END_TEST_SUITE()
 
 #endif

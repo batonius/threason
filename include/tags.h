@@ -38,20 +38,11 @@ inline ThsnResult thsn_vector_store_tagged_value(ThsnVector* /*in/out*/ vector,
                                                  ThsnTag tag,
                                                  ThsnSlice value_slice) {
     BAIL_ON_NULL_INPUT(vector);
-    if (value_slice.size > 0) {
-        BAIL_ON_NULL_INPUT(value_slice.data);
-    }
-    size_t allocation_offset;
+    ThsnMutSlice allocated_data;
     BAIL_ON_ERROR(thsn_vector_grow(vector, sizeof(tag) + value_slice.size,
-                                   &allocation_offset));
-    char* allocated_data;
-    BAIL_ON_ERROR(thsn_vector_data_at_offset(*vector, allocation_offset,
-                                             sizeof(tag), &allocated_data));
-    memcpy(allocated_data, &tag, sizeof(tag));
-    allocated_data += sizeof(tag);
-    if (value_slice.size > 0) {
-        memcpy(allocated_data, value_slice.data, value_slice.size);
-    }
+                                   &allocated_data));
+    BAIL_ON_ERROR(THSN_MUT_SLICE_WRITE_VAR(allocated_data, tag));
+    BAIL_ON_ERROR(thsn_mut_slice_write(&allocated_data, value_slice));
     return THSN_RESULT_SUCCESS;
 }
 

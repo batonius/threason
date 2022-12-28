@@ -37,6 +37,7 @@ inline ThsnResult thsn_slice_from_c_str(const char* data,
 inline ThsnResult thsn_slice_at_offset(ThsnSlice base_slice, size_t offset,
                                        size_t min_size,
                                        ThsnSlice* /*out*/ slice_at_offset) {
+    BAIL_ON_NULL_INPUT(slice_at_offset);
     if (offset >= base_slice.size || (base_slice.size - offset) < min_size) {
         return THSN_RESULT_INPUT_ERROR;
     }
@@ -62,8 +63,12 @@ inline ThsnMutSlice thsn_mut_slice_make(char* data, size_t size) {
     return (ThsnMutSlice){.data = data, .size = size};
 }
 
+#define THSN_MUT_SLICE_FROM_VAR(v) thsn_mut_slice_make((char*)&(v), sizeof(v))
+
 inline ThsnResult thsn_mut_slice_write(ThsnMutSlice* /*in/out*/ mut_slice,
                                        ThsnSlice data_slice) {
+    BAIL_ON_NULL_INPUT(mut_slice);
+
     if (mut_slice->size < data_slice.size) {
         return THSN_RESULT_INPUT_ERROR;
     }
@@ -74,19 +79,24 @@ inline ThsnResult thsn_mut_slice_write(ThsnMutSlice* /*in/out*/ mut_slice,
     return THSN_RESULT_SUCCESS;
 }
 
-#define THSN_MUT_SLICE_COPY_VAR(mut_slice, var) \
+#define THSN_MUT_SLICE_WRITE_VAR(mut_slice, var) \
     thsn_mut_slice_write(&mut_slice, THSN_SLICE_FROM_VAR(var))
 
 inline ThsnResult thsn_slice_read(ThsnSlice* data_slice,
                                   ThsnMutSlice mut_slice) {
+    BAIL_ON_NULL_INPUT(data_slice);
+
     if (mut_slice.size > data_slice->size) {
         return THSN_RESULT_INPUT_ERROR;
     }
 
     memcpy(mut_slice.data, data_slice->data, mut_slice.size);
     data_slice->data += mut_slice.size;
-    data_slice->size += mut_slice.size;
+    data_slice->size -= mut_slice.size;
     return THSN_RESULT_SUCCESS;
 }
+
+#define THSN_SLICE_READ_VAR(slice, var) \
+    thsn_slice_read(&slice, THSN_MUT_SLICE_FROM_VAR(var))
 
 #endif
