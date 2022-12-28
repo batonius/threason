@@ -4,20 +4,30 @@
 #include "testing.h"
 #include "vector.h"
 
+TEST(makes_empty_vector) {
+    ThsnVector vector = thsn_vector_make_empty();
+    ASSERT_EQ(thsn_vector_space_left(vector), 0);
+    ASSERT_EQ(thsn_vector_current_offset(vector), 0);
+    ASSERT_EQ(thsn_vector_is_empty(vector), true);
+}
+
 TEST(allocates_vector) {
     ThsnVector vector = {.buffer = NULL, .capacity = 0, .offset = 1};
     ASSERT_SUCCESS(thsn_vector_allocate(&vector, 1024));
     ASSERT_NEQ(vector.buffer, NULL);
     ASSERT_EQ(vector.capacity, 1024);
     ASSERT_EQ(vector.offset, 0);
-    ASSERT_EQ(thsn_vector_allocate(NULL, 1024), THSN_RESULT_INPUT_ERROR);
+    ASSERT_EQ(thsn_vector_space_left(vector), 1024);
+    ASSERT_EQ(thsn_vector_current_offset(vector), 0);
+    ASSERT_EQ(thsn_vector_is_empty(vector), true);
+    ASSERT_INPUT_ERROR(thsn_vector_allocate(NULL, 1024));
 }
 
 TEST(frees_vector) {
     ThsnVector vector = {.buffer = NULL, .capacity = 0, .offset = 1};
     ASSERT_SUCCESS(thsn_vector_allocate(&vector, 1024));
     ASSERT_SUCCESS(thsn_vector_free(&vector));
-    ASSERT_EQ(thsn_vector_free(NULL), THSN_RESULT_INPUT_ERROR);
+    ASSERT_INPUT_ERROR(thsn_vector_free(NULL));
 }
 
 TEST(grows_vector) {
@@ -25,22 +35,30 @@ TEST(grows_vector) {
     ASSERT_SUCCESS(thsn_vector_allocate(&vector, 1024));
     ASSERT_SUCCESS(thsn_vector_grow(&vector, 1024, NULL));
     ASSERT_EQ(vector.offset, 1024);
-    ASSERT_SUCCESS(thsn_vector_grow(&vector, 1024, NULL));
+    ThsnMutSlice mut_slice;
+    ASSERT_SUCCESS(thsn_vector_grow(&vector, 1024, &mut_slice));
     ASSERT_EQ(vector.offset, 2048);
-    ASSERT_EQ(thsn_vector_grow(NULL, 1024, NULL), THSN_RESULT_INPUT_ERROR);
+    ASSERT_EQ(mut_slice.size, 1024);
+    ASSERT_NEQ(mut_slice.data, NULL);
+    ASSERT_INPUT_ERROR(thsn_vector_grow(NULL, 1024, NULL));
     ASSERT_EQ(thsn_vector_grow(&vector, SIZE_MAX, NULL),
               THSN_RESULT_OUT_OF_MEMORY_ERROR);
 }
 
 TEST(shrinks_vector) {
     ThsnVector vector = thsn_vector_make_empty();
-    ASSERT_SUCCESS(thsn_vector_allocate(&vector, 1024));
-    ASSERT_EQ(thsn_vector_space_left(vector), 1024);
-    ASSERT_SUCCESS(thsn_vector_grow(&vector, 24, NULL));
+    ASSERT_SUCCESS(thsn_vector_allocate(&vector, 1000));
     ASSERT_EQ(thsn_vector_space_left(vector), 1000);
+    ASSERT_SUCCESS(thsn_vector_grow(&vector, 40, NULL));
+    ASSERT_EQ(thsn_vector_space_left(vector), 960);
     ASSERT_SUCCESS(thsn_vector_shrink(&vector, 20, NULL));
-    ASSERT_EQ(thsn_vector_space_left(vector), 1020);
-    ASSERT_EQ(thsn_vector_shrink(NULL, 10, NULL), THSN_RESULT_INPUT_ERROR);
+    ASSERT_EQ(thsn_vector_space_left(vector), 980);
+    ThsnSlice slice;
+    ASSERT_SUCCESS(thsn_vector_shrink(&vector, 20, &slice));
+    ASSERT_EQ(thsn_vector_space_left(vector), 1000);
+    ASSERT_EQ(slice.size, 20);
+    ASSERT_NEQ(slice.data, NULL);
+    ASSERT_INPUT_ERROR(thsn_vector_shrink(NULL, 10, NULL));
 }
 
 TEST(pushes_and_pops) {
@@ -68,6 +86,7 @@ TEST(pushes_and_pops) {
 // clang-format off
 
 TEST_SUITE(vector)
+    makes_empty_vector,
     allocates_vector,
     frees_vector,
     grows_vector,
