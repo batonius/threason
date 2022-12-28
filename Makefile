@@ -1,10 +1,10 @@
 CC=clang
 CFLAGS=-Wall -Wextra -Werror -pedantic -std=c2x -march=native \
 	 -D_POSIX_C_SOURCE=200809 -D_GNU_SOURCE -Iinclude -flto
+LDFLAGS=
 BUILD-DIR=build
 SRC-DIR=src
 TEST-DIR=tests
-LDFLAGS=-flto
 SRCS=$(notdir $(wildcard $(SRC-DIR)/*.c))
 OBJS=$(patsubst %.c,%.o,$(SRCS))
 TEST-SRCS=$(notdir $(wildcard $(TEST-DIR)/*.c))
@@ -16,10 +16,8 @@ endif
 
 ifdef DEBUG
 	CFLAGS+= -g -O0
-	LDFLAGS+= -g
 else ifdef DEBUGO3
 	CFLAGS+= -g -O3
-	LDFLATS+= -g
 else
     CFLAGS+= -O3
 	LDFLAGS+= -s
@@ -35,18 +33,22 @@ ifdef UBSAN
 	LDFLAGS+= -fsanitize=undefined
 endif
 
+.SUFFIXES:
+.PHONY: all clean tests
+
 all: tests
 
 $(BUILD-DIR):
 	mkdir $(BUILD-DIR)
 
-$(BUILD-DIR)/%.o: $(SRC-DIR)/%.c $(BUILD-DIR)
+$(BUILD-DIR)/%.o: $(SRC-DIR)/%.c | $(BUILD-DIR)
 	$(CC) $(CFLAGS) -c $< -o $@
-	
+
+ 	
 $(BUILD-DIR)/%: $(TEST-DIR)/%.c $(addprefix $(BUILD-DIR)/, $(OBJS))
 	$(CC) $(CFLAGS) $(LDFLAGS) $^ -o $@
-
-tests: $(BUILD-DIR) $(addprefix $(BUILD-DIR)/, $(TEST-BINS))
+ 
+tests: $(addprefix $(BUILD-DIR)/, $(TEST-BINS)) | $(BUILD_DIR)
 	
 clean:
 	rm -rf $(BUILD-DIR)

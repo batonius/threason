@@ -118,7 +118,7 @@ TEST(reads_from_slice) {
     ASSERT_EQ(slice.size, 2);
 }
 
-// clang-format off
+/* clang-format off */
 
 TEST_SUITE(slice)
     creates_empty_slice,

@@ -102,6 +102,8 @@ inline ThsnResult thsn_vector_slice_at_offset(ThsnVector vector, size_t offset,
                                               size_t size,
                                               ThsnSlice* /*out*/ slice) {
     BAIL_ON_NULL_INPUT(slice);
+    /* It's ok to read up to `capacity`, for example the data we just "popped"
+     * by decreasing `offset`. */
     if (offset > vector.capacity || size > (vector.capacity - offset)) {
         return THSN_RESULT_INPUT_ERROR;
     }
@@ -113,7 +115,8 @@ inline ThsnResult thsn_vector_mut_slice_at_offset(
     ThsnVector vector, size_t offset, size_t size,
     ThsnMutSlice* /*out*/ mut_slice) {
     BAIL_ON_NULL_INPUT(mut_slice);
-    if (offset > vector.capacity || size > (vector.capacity - offset)) {
+    /* It's never ok to write beyond `offset`. */
+    if (offset > vector.offset || size > (vector.offset - offset)) {
         return THSN_RESULT_INPUT_ERROR;
     }
     *mut_slice = thsn_mut_slice_make(vector.buffer + offset, size);

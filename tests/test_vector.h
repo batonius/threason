@@ -81,9 +81,48 @@ TEST(pushes_and_pops) {
     ASSERT_EQ(b, 2);
     ASSERT_EQ(c, 3);
     ASSERT_EQ(d, 4);
+    ASSERT_INPUT_ERROR(THSN_VECTOR_POP_VAR(vector, a));
 }
 
-// clang-format off
+TEST(returns_slice_at_offset) {
+    char array[] = {1, 2, 3};
+    ThsnVector vector = thsn_vector_make_empty();
+    ASSERT_SUCCESS(thsn_vector_allocate(&vector, 1024));
+    ASSERT_SUCCESS(THSN_VECTOR_PUSH_VAR(vector, array));
+    ThsnSlice slice;
+    ASSERT_SUCCESS(thsn_vector_slice_at_offset(vector, 1, 20, &slice));
+    ASSERT_EQ(slice.size, 20);
+    char x;
+    ASSERT_SUCCESS(THSN_SLICE_READ_VAR(slice, x));
+    ASSERT_EQ(x, 2);
+    ASSERT_SUCCESS(THSN_SLICE_READ_VAR(slice, x));
+    ASSERT_EQ(x, 3);
+    ASSERT_SUCCESS(thsn_vector_slice_at_offset(vector, 20, 20, &slice));
+    ASSERT_INPUT_ERROR(
+        thsn_vector_slice_at_offset(vector, 1, 1024 * 1024, &slice));
+    ASSERT_INPUT_ERROR(
+        thsn_vector_slice_at_offset(vector, 1024 * 1024, 1, &slice));
+}
+
+TEST(returns_mut_slice_at_offset) {
+    char array[] = {1, 2, 3};
+    ThsnVector vector = thsn_vector_make_empty();
+    ASSERT_SUCCESS(thsn_vector_allocate(&vector, 1024));
+    ASSERT_SUCCESS(THSN_VECTOR_PUSH_VAR(vector, array));
+    ASSERT_EQ(*(vector.buffer + 1), 2);
+    ThsnMutSlice mut_slice;
+    ASSERT_SUCCESS(thsn_vector_mut_slice_at_offset(vector, 1, 2, &mut_slice));
+    ASSERT_EQ(mut_slice.size, 2);
+    char x = 20;
+    ASSERT_SUCCESS(THSN_MUT_SLICE_WRITE_VAR(mut_slice, x));
+    ASSERT_EQ(*(vector.buffer + 1), 20);
+    ASSERT_INPUT_ERROR(
+        thsn_vector_mut_slice_at_offset(vector, 1, 3, &mut_slice));
+    ASSERT_INPUT_ERROR(
+        thsn_vector_mut_slice_at_offset(vector, 3, 1, &mut_slice));
+}
+
+/* clang-format off */
 
 TEST_SUITE(vector)
     makes_empty_vector,
@@ -92,6 +131,8 @@ TEST_SUITE(vector)
     grows_vector,
     shrinks_vector,
     pushes_and_pops,
+    returns_slice_at_offset,
+    returns_mut_slice_at_offset,
 END_TEST_SUITE() 
 
 #endif

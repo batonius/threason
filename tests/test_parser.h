@@ -32,7 +32,7 @@ TEST(scalar_values) {
     0x70 END_ASSERT_BYTES();
 }
 
-// clang-format off
+/* clang-format off */
 
 TEST_SUITE(parser)
     scalar_values, 

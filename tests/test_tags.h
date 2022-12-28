@@ -84,7 +84,7 @@ TEST(stores_strings) {
               0);
 }
 
-// clang-format off
+/* clang-format off */
 
 TEST_SUITE(tags)
     stores_null,
