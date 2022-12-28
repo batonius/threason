@@ -34,6 +34,7 @@ ifdef UBSAN
 endif
 
 .SUFFIXES:
+
 .PHONY: all clean tests
 
 all: tests
@@ -44,7 +45,6 @@ $(BUILD-DIR):
 $(BUILD-DIR)/%.o: $(SRC-DIR)/%.c | $(BUILD-DIR)
 	$(CC) $(CFLAGS) -c $< -o $@
 
- 	
 $(BUILD-DIR)/%: $(TEST-DIR)/%.c $(addprefix $(BUILD-DIR)/, $(OBJS))
 	$(CC) $(CFLAGS) $(LDFLAGS) $^ -o $@
  
