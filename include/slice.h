@@ -28,6 +28,7 @@ inline ThsnSlice thsn_slice_make(const char* data, size_t size) {
 inline ThsnResult thsn_slice_from_c_str(const char* data,
                                         ThsnSlice* /*out*/ result_slice) {
     BAIL_ON_NULL_INPUT(data);
+    BAIL_ON_NULL_INPUT(result_slice);
     *result_slice = (ThsnSlice){.data = data, .size = strlen(data)};
     return THSN_RESULT_SUCCESS;
 }
@@ -57,6 +58,17 @@ inline void thsn_slice_advance_unsafe(ThsnSlice* /*in/out*/ slice,
 inline char thsn_slice_advance_char_unsafe(ThsnSlice* /*in/out*/ slice) {
     --slice->size;
     return *slice->data++;
+}
+
+inline bool thsn_slice_try_consume_char(ThsnSlice* /*in/out*/ slice,
+                                        char* /*out*/ c) {
+    BAIL_ON_NULL_INPUT(slice);
+    BAIL_ON_NULL_INPUT(c);
+    if (thsn_slice_is_empty(*slice)) {
+        return false;
+    }
+    *c = thsn_slice_advance_char_unsafe(slice);
+    return true;
 }
 
 inline ThsnMutSlice thsn_mut_slice_make(char* data, size_t size) {

@@ -14,12 +14,11 @@ ThsnResult thsn_next_token(ThsnSlice* /*in/out*/ buffer_slice,
     char c = 0;
 
     do {
-        if (thsn_slice_is_empty(*buffer_slice)) {
+        if (!thsn_slice_try_consume_char(buffer_slice, &c)) {
             *token = THSN_TOKEN_EOF;
             *token_slice = thsn_slice_make_empty();
             return THSN_RESULT_SUCCESS;
         }
-        c = thsn_slice_advance_char_unsafe(buffer_slice);
     } while (isspace(c));
 
     *token = THSN_TOKEN_ERROR;
@@ -129,8 +128,7 @@ ThsnResult thsn_next_token(ThsnSlice* /*in/out*/ buffer_slice,
             bool e_present = false;
             bool done = false;
             bool waiting_for_sign = false;
-            while (!thsn_slice_is_empty(*buffer_slice) && !done) {
-                c = thsn_slice_advance_char_unsafe(buffer_slice);
+            while (!done && thsn_slice_try_consume_char(buffer_slice, &c)) {
                 ++token_slice->size;
                 switch (c) {
                     case '.':

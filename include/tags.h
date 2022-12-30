@@ -124,10 +124,10 @@ inline ThsnResult thsn_slice_read_string(ThsnSlice stored_string_slice,
                                          ThsnSlice* /*out*/ string_slice,
                                          size_t* /*out*/ stored_length) {
     BAIL_ON_NULL_INPUT(string_slice);
-    if (thsn_slice_is_empty(stored_string_slice)) {
+    char key_str_tag;
+    if (!thsn_slice_try_consume_char(&stored_string_slice, &key_str_tag)) {
         return THSN_RESULT_INPUT_ERROR;
     }
-    char key_str_tag = thsn_slice_advance_char_unsafe(&stored_string_slice);
     *string_slice = thsn_slice_make_empty();
     switch (thsn_tag_type(key_str_tag)) {
         case THSN_TAG_REF_STRING:

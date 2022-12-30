@@ -23,9 +23,9 @@ typedef struct {
 
 static long long thsn_atoll_checked(ThsnSlice slice) {
     long long result = 0;
-    if (!thsn_slice_is_empty(slice)) {
+    char c;
+    if (thsn_slice_try_consume_char(&slice, &c)) {
         bool sign = true;
-        char c = thsn_slice_advance_char_unsafe(&slice);
         if (c == '-') {
             if (thsn_slice_is_empty(slice)) {
                 return 0;
@@ -35,8 +35,7 @@ static long long thsn_atoll_checked(ThsnSlice slice) {
             result = c - '0';
         }
 
-        while (!thsn_slice_is_empty(slice)) {
-            c = thsn_slice_advance_char_unsafe(&slice);
+        while (thsn_slice_try_consume_char(&slice, &c)) {
             result = result * 10 + (c - '0');
         }
 
