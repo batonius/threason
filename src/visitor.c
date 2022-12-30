@@ -76,16 +76,16 @@ ThsnResult thsn_visit(ThsnSlice parse_result, ThsnVisitorVTable* vtable,
                       error_cleanup);
 
         char tag = thsn_slice_advance_char_unsafe(&data_slice);
-        switch (THSN_TAG_TYPE(tag)) {
+        switch (thsn_tag_type(tag)) {
             case THSN_TAG_NULL:
                 CALL_VISITOR2(vtable->visit_null, &context, user_data);
                 break;
             case THSN_TAG_BOOL:
                 CALL_VISITOR3(vtable->visit_bool, &context, user_data,
-                              THSN_TAG_SIZE(tag) != THSN_TAG_SIZE_FALSE);
+                              thsn_tag_size(tag) != THSN_TAG_SIZE_FALSE);
                 break;
             case THSN_TAG_SMALL_STRING: {
-                size_t string_size = THSN_TAG_SIZE(tag);
+                size_t string_size = thsn_tag_size(tag);
                 if (data_slice.size < string_size) {
                     goto error_cleanup;
                 }
@@ -96,7 +96,7 @@ ThsnResult thsn_visit(ThsnSlice parse_result, ThsnVisitorVTable* vtable,
             case THSN_TAG_REF_STRING: {
                 ThsnSlice string_slice = thsn_slice_make_empty();
 
-                if (THSN_TAG_SIZE(tag) != THSN_TAG_SIZE_EMPTY) {
+                if (thsn_tag_size(tag) != THSN_TAG_SIZE_EMPTY) {
                     READ_SLICE_INTO_VAR(data_slice, string_slice);
                 }
                 CALL_VISITOR3(vtable->visit_string, &context, user_data,
@@ -105,7 +105,7 @@ ThsnResult thsn_visit(ThsnSlice parse_result, ThsnVisitorVTable* vtable,
             }
             case THSN_TAG_INT: {
                 long long value = 0;
-                switch (THSN_TAG_SIZE(tag)) {
+                switch (thsn_tag_size(tag)) {
                     case THSN_TAG_SIZE_ZERO:
                         break;
                     case sizeof(int8_t): {
@@ -149,7 +149,7 @@ ThsnResult thsn_visit(ThsnSlice parse_result, ThsnVisitorVTable* vtable,
                     break;
                 }
                 size_t elements_count = 0;
-                if (THSN_TAG_SIZE(tag) != THSN_TAG_SIZE_EMPTY) {
+                if (thsn_tag_size(tag) != THSN_TAG_SIZE_EMPTY) {
                     size_t elements_table_offset = 0;
                     READ_SLICE_INTO_VAR(data_slice, elements_count);
                     READ_SLICE_INTO_VAR(data_slice, elements_table_offset);
@@ -168,7 +168,7 @@ ThsnResult thsn_visit(ThsnSlice parse_result, ThsnVisitorVTable* vtable,
                     break;
                 }
                 size_t elements_count = 0;
-                if (THSN_TAG_SIZE(tag) != THSN_TAG_SIZE_EMPTY) {
+                if (thsn_tag_size(tag) != THSN_TAG_SIZE_EMPTY) {
                     size_t elements_table_offset = 0;
                     READ_SLICE_INTO_VAR(data_slice, elements_count);
                     READ_SLICE_INTO_VAR(data_slice, elements_table_offset);

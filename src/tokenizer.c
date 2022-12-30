@@ -1,3 +1,6 @@
+#include <ctype.h>
+#include <stdbool.h>
+
 #include "slice.h"
 #include "tokenizer.h"
 
@@ -6,6 +9,7 @@ ThsnResult thsn_next_token(ThsnSlice* /*in/out*/ buffer_slice,
                            ThsnToken* /*out*/ token) {
     BAIL_ON_NULL_INPUT(buffer_slice);
     BAIL_ON_NULL_INPUT(token_slice);
+    BAIL_ON_NULL_INPUT(token);
 
     char c = 0;
 

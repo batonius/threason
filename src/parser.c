@@ -221,12 +221,12 @@ static ThsnResult thsn_parser_parse_first_array_element(
     if (token == THSN_TOKEN_CLOSED_BRACKET) {
         parser_status->state = THSN_PARSER_STATE_FINISH;
         return thsn_vector_store_tagged_value(
-            result_vector, THSN_TAG_MAKE(THSN_TAG_ARRAY, THSN_TAG_SIZE_EMPTY),
+            result_vector, thsn_tag_make(THSN_TAG_ARRAY, THSN_TAG_SIZE_EMPTY),
             thsn_slice_make_empty());
     }
     BAIL_ON_ERROR(thsn_parser_store_composite_header(
         parser_status, result_vector,
-        THSN_TAG_MAKE(THSN_TAG_ARRAY, THSN_TAG_SIZE_INBOUND)));
+        thsn_tag_make(THSN_TAG_ARRAY, THSN_TAG_SIZE_INBOUND)));
     ThsnParserState return_to_state = THSN_PARSER_STATE_NEXT_ARRAY_ELEMENT;
     BAIL_ON_ERROR(THSN_VECTOR_PUSH_VAR(parser_status->stack, return_to_state));
     return thsn_parser_parse_value(token, token_slice, parser_status,
@@ -277,7 +277,7 @@ static ThsnResult thsn_parser_parse_first_kv(ThsnToken token,
     if (token == THSN_TOKEN_CLOSED_BRACE) {
         parser_status->state = THSN_PARSER_STATE_FINISH;
         return thsn_vector_store_tagged_value(
-            result_vector, THSN_TAG_MAKE(THSN_TAG_OBJECT, THSN_TAG_SIZE_EMPTY),
+            result_vector, thsn_tag_make(THSN_TAG_OBJECT, THSN_TAG_SIZE_EMPTY),
             thsn_slice_make_empty());
     }
     if (token != THSN_TOKEN_STRING) {
@@ -285,7 +285,7 @@ static ThsnResult thsn_parser_parse_first_kv(ThsnToken token,
     }
     BAIL_ON_ERROR(thsn_parser_store_composite_header(
         parser_status, result_vector,
-        THSN_TAG_MAKE(THSN_TAG_OBJECT, THSN_TAG_SIZE_INBOUND)));
+        thsn_tag_make(THSN_TAG_OBJECT, THSN_TAG_SIZE_INBOUND)));
     BAIL_ON_ERROR(thsn_vector_store_string(result_vector, token_slice));
     parser_status->state = THSN_PARSER_STATE_KV_COLON;
     return THSN_RESULT_SUCCESS;

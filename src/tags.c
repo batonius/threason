@@ -1,5 +1,11 @@
 #include "tags.h"
 
+ThsnTag thsn_tag_make(ThsnTagType type, ThsnTagSize size);
+
+ThsnTagType thsn_tag_type(ThsnTag tag);
+
+ThsnTagSize thsn_tag_size(ThsnTag tag);
+
 ThsnResult thsn_vector_store_tagged_value(ThsnVector* /*in/out*/ vector,
                                           ThsnTag tag, ThsnSlice value_slice);
 

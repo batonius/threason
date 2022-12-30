@@ -1,10 +1,6 @@
 #ifndef THSN_TOKENIZER_H
 #define THSN_TOKENIZER_H
 
-#include <ctype.h>
-#include <stdbool.h>
-#include <string.h>
-
 #include "result.h"
 #include "slice.h"
 
@@ -26,8 +22,8 @@ typedef enum {
     THSN_TOKEN_CLOSED_BRACE,
 } ThsnToken;
 
-ThsnResult thsn_next_token(ThsnSlice* restrict /*in/out*/ buffer_slice,
-                           ThsnSlice* restrict /*out*/ token_slice,
+ThsnResult thsn_next_token(ThsnSlice* /*in/out*/ buffer_slice,
+                           ThsnSlice* /*out*/ token_slice,
                            ThsnToken* /*out*/ token);
 
 #endif
