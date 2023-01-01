@@ -88,7 +88,7 @@ int thsn_parser_compare_kv_keys(const void* a, const void* b, void* data) {
     const size_t min_len = a_key_str_slice.size < b_key_str_slice.size
                                ? a_key_str_slice.size
                                : b_key_str_slice.size;
-    int cmp_result =
+    const int cmp_result =
         memcmp(a_key_str_slice.data, b_key_str_slice.data, min_len);
     if (cmp_result == 0) {
         if (a_key_str_slice.size == b_key_str_slice.size) {

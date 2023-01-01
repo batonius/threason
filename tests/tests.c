@@ -1,12 +1,13 @@
-// clang-format off
+#include "test_parser.h"
+#include "test_slice.h"
+#include "test_tags.h"
+#include "test_tautology.h"
+#include "test_tokenizer.h"
+#include "test_value.h"
+#include "test_vector.h"
 #include "testing.h"
 
-#include "test_tautology.h"
-#include "test_slice.h"
-#include "test_vector.h"
-#include "test_parser.h"
-#include "test_tags.h"
-#include "test_tokenizer.h"
+/* clang-format off */
 
 TEST_MAIN()
 	RUN_SUITE(tautology);
@@ -15,4 +16,5 @@ TEST_MAIN()
 	RUN_SUITE(parser);
 	RUN_SUITE(tags);
 	RUN_SUITE(tokenizer);
+	RUN_SUITE(value);
 END_MAIN()

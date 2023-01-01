@@ -39,7 +39,7 @@ inline ThsnResult thsn_slice_at_offset(ThsnSlice base_slice, size_t offset,
                                        size_t min_size,
                                        ThsnSlice* /*out*/ slice_at_offset) {
     BAIL_ON_NULL_INPUT(slice_at_offset);
-    if (offset >= base_slice.size || (base_slice.size - offset) < min_size) {
+    if (offset > base_slice.size || (base_slice.size - offset) < min_size) {
         return THSN_RESULT_INPUT_ERROR;
     }
     *slice_at_offset =

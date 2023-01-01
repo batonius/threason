@@ -18,6 +18,7 @@ typedef enum {
 
 typedef size_t ThsnValueHandle;
 #define THSN_VALUE_HANDLE_FIRST 0
+#define THSN_VALUE_HANDLE_NOT_FOUND SIZE_MAX
 
 typedef ThsnSlice ThsnValueArrayTable;
 typedef ThsnSlice ThsnValueObjectTable;
@@ -153,7 +154,7 @@ inline ThsnResult thsn_value_read_string_ex(ThsnSlice data_slice,
     BAIL_ON_ERROR(THSN_SLICE_READ_VAR(value_slice, value_tag));
     switch (thsn_tag_type(value_tag)) {
         case THSN_TAG_SMALL_STRING: {
-            size_t string_length = thsn_tag_size(value_tag);
+            const size_t string_length = thsn_tag_size(value_tag);
             *string_slice = value_slice;
             BAIL_ON_ERROR(thsn_slice_truncate(string_slice, string_length));
             if (consumed_size != NULL) {
@@ -206,7 +207,7 @@ inline ThsnResult thsn_value_read_composite(ThsnSlice data_slice,
             size_t table_len;
             BAIL_ON_ERROR(THSN_SLICE_READ_VAR(value_slice, table_len));
             BAIL_ON_ERROR(THSN_SLICE_READ_VAR(value_slice, table_offset));
-            size_t table_size = table_len * sizeof(size_t);
+            const size_t table_size = table_len * sizeof(size_t);
             BAIL_ON_ERROR(thsn_slice_at_offset(data_slice, table_offset,
                                                table_size, elements_table));
             BAIL_ON_ERROR(thsn_slice_truncate(elements_table, table_size));
@@ -242,6 +243,8 @@ inline ThsnResult thsn_value_array_element_handle(
 
 inline ThsnResult thsn_value_array_consume_element(
     ThsnValueArrayTable* array_table, ThsnValueHandle* element_handle) {
+    BAIL_ON_NULL_INPUT(array_table);
+    BAIL_ON_NULL_INPUT(element_handle);
     BAIL_ON_ERROR(THSN_SLICE_READ_VAR(*array_table, *element_handle));
     return THSN_RESULT_SUCCESS;
 }
@@ -262,6 +265,8 @@ inline ThsnResult thsn_value_object_read_kv(ThsnSlice data_slice,
                                             ThsnValueHandle kv_handle,
                                             ThsnSlice* key_slice,
                                             ThsnValueHandle* value_handle) {
+    BAIL_ON_NULL_INPUT(key_slice);
+    BAIL_ON_NULL_INPUT(value_handle);
     size_t key_size;
     BAIL_ON_ERROR(
         thsn_value_read_string_ex(data_slice, kv_handle, key_slice, &key_size));
@@ -284,6 +289,9 @@ inline ThsnResult thsn_value_object_element_handle(
 inline ThsnResult thsn_value_object_consume_element(
     ThsnSlice data_slice, ThsnValueObjectTable* object_table,
     ThsnSlice* key_slice, ThsnValueHandle* value_handle) {
+    BAIL_ON_NULL_INPUT(object_table);
+    BAIL_ON_NULL_INPUT(key_slice);
+    BAIL_ON_NULL_INPUT(value_handle);
     ThsnValueHandle kv_handle;
     BAIL_ON_ERROR(thsn_value_array_consume_element(object_table, &kv_handle));
     return thsn_value_object_read_kv(data_slice, kv_handle, key_slice,
@@ -294,12 +302,38 @@ inline ThsnResult thsn_value_object_index(ThsnSlice data_slice,
                                           ThsnValueObjectTable object_table,
                                           ThsnSlice key_slice,
                                           ThsnValueHandle* handle) {
-    (void)data_slice;
-    (void)object_table;
-    (void)key_slice;
-    (void)handle;
-    // TODO
-    return THSN_RESULT_INPUT_ERROR;
+    ThsnSlice element_key_slice;
+    ThsnValueHandle element_value_handle;
+    *handle = THSN_VALUE_HANDLE_NOT_FOUND;
+    while (!thsn_slice_is_empty(object_table)) {
+        const size_t elements_count = object_table.size / sizeof(size_t);
+        const size_t midpoint = elements_count / 2;
+        BAIL_ON_ERROR(thsn_value_object_element_handle(
+            data_slice, object_table, midpoint, &element_key_slice,
+            &element_value_handle));
+        const size_t min_len = key_slice.size < element_key_slice.size
+                                   ? key_slice.size
+                                   : element_key_slice.size;
+        int cmp_result =
+            memcmp(key_slice.data, element_key_slice.data, min_len);
+        if (cmp_result == 0 && key_slice.size != element_key_slice.size) {
+            cmp_result = key_slice.size < element_key_slice.size ? -1 : 1;
+        }
+
+        if (cmp_result == 0) {
+            *handle = element_value_handle;
+            return THSN_RESULT_SUCCESS;
+        } else if (cmp_result < 0) {
+            BAIL_ON_ERROR(
+                thsn_slice_truncate(&object_table, midpoint * sizeof(size_t)));
+        } else {
+            BAIL_ON_ERROR(thsn_slice_at_offset(
+                object_table, (midpoint + 1) * sizeof(size_t),
+                (elements_count - midpoint - 1) * sizeof(size_t),
+                &object_table));
+        }
+    }
+    return THSN_RESULT_SUCCESS;
 }
 
 #endif
