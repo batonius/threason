@@ -47,6 +47,15 @@ inline ThsnResult thsn_slice_at_offset(ThsnSlice base_slice, size_t offset,
     return THSN_RESULT_SUCCESS;
 }
 
+inline ThsnResult thsn_slice_truncate(ThsnSlice* slice, size_t exact_size) {
+    BAIL_ON_NULL_INPUT(slice);
+    if (exact_size > slice->size) {
+        return THSN_RESULT_INPUT_ERROR;
+    }
+    slice->size = exact_size;
+    return THSN_RESULT_SUCCESS;
+}
+
 inline bool thsn_slice_is_empty(ThsnSlice slice) { return slice.size == 0; }
 
 inline void thsn_slice_advance_unsafe(ThsnSlice* /*in/out*/ slice,

@@ -3,21 +3,8 @@
 #include "parser.h"
 #include "visitor.h"
 
-ThsnVisitorResult visit_integer(ThsnVisitorContext* context, void* user_data,
-                                long long value) {
-    (void)user_data;
-    if (context->in_object) {
-        printf("\"%.*s\": ", (int)context->key.size, context->key.data);
-    }
-    printf("%lld", value);
-    if ((context->in_array || context->in_object) && !context->last) {
-        printf(", ");
-    }
-    return THSN_VISITOR_RESULT_CONTINUE;
-}
-
-ThsnVisitorResult visit_double(ThsnVisitorContext* context, void* user_data,
-                               double value) {
+ThsnVisitorResult visit_number(const ThsnVisitorContext* context,
+                               void* user_data, double value) {
     (void)user_data;
     if (context->in_object) {
         printf("\"%.*s\": ", (int)context->key.size, context->key.data);
@@ -29,7 +16,8 @@ ThsnVisitorResult visit_double(ThsnVisitorContext* context, void* user_data,
     return THSN_VISITOR_RESULT_CONTINUE;
 }
 
-ThsnVisitorResult visit_null(ThsnVisitorContext* context, void* user_data) {
+ThsnVisitorResult visit_null(const ThsnVisitorContext* context,
+                             void* user_data) {
     (void)user_data;
     if (context->in_object) {
         printf("\"%.*s\": ", (int)context->key.size, context->key.data);
@@ -41,7 +29,7 @@ ThsnVisitorResult visit_null(ThsnVisitorContext* context, void* user_data) {
     return THSN_VISITOR_RESULT_CONTINUE;
 }
 
-ThsnVisitorResult visit_bool(ThsnVisitorContext* context, void* user_data,
+ThsnVisitorResult visit_bool(const ThsnVisitorContext* context, void* user_data,
                              bool value) {
     (void)user_data;
     if (context->in_object) {
@@ -54,8 +42,8 @@ ThsnVisitorResult visit_bool(ThsnVisitorContext* context, void* user_data,
     return THSN_VISITOR_RESULT_CONTINUE;
 }
 
-ThsnVisitorResult visit_string(ThsnVisitorContext* context, void* user_data,
-                               ThsnSlice value) {
+ThsnVisitorResult visit_string(const ThsnVisitorContext* context,
+                               void* user_data, ThsnSlice value) {
     (void)user_data;
     if (context->in_object) {
         printf("\"%.*s\": ", (int)context->key.size, context->key.data);
@@ -67,7 +55,7 @@ ThsnVisitorResult visit_string(ThsnVisitorContext* context, void* user_data,
     return THSN_VISITOR_RESULT_CONTINUE;
 }
 
-ThsnVisitorResult visit_array_start(ThsnVisitorContext* context,
+ThsnVisitorResult visit_array_start(const ThsnVisitorContext* context,
                                     void* user_data) {
     (void)user_data;
     if (context->in_object) {
@@ -77,7 +65,7 @@ ThsnVisitorResult visit_array_start(ThsnVisitorContext* context,
     return THSN_VISITOR_RESULT_CONTINUE;
 }
 
-ThsnVisitorResult visit_array_end(ThsnVisitorContext* context,
+ThsnVisitorResult visit_array_end(const ThsnVisitorContext* context,
                                   void* user_data) {
     (void)user_data;
     printf("]");
@@ -87,7 +75,7 @@ ThsnVisitorResult visit_array_end(ThsnVisitorContext* context,
     return THSN_VISITOR_RESULT_CONTINUE;
 }
 
-ThsnVisitorResult visit_object_start(ThsnVisitorContext* context,
+ThsnVisitorResult visit_object_start(const ThsnVisitorContext* context,
                                      void* user_data) {
     (void)user_data;
     if (context->in_object) {
@@ -97,7 +85,7 @@ ThsnVisitorResult visit_object_start(ThsnVisitorContext* context,
     return THSN_VISITOR_RESULT_CONTINUE;
 }
 
-ThsnVisitorResult visit_object_end(ThsnVisitorContext* context,
+ThsnVisitorResult visit_object_end(const ThsnVisitorContext* context,
                                    void* user_data) {
     (void)user_data;
     printf("}");
@@ -113,8 +101,7 @@ int main(int argc, char** argv) {
     ThsnVisitorVTable visitor_vtable = {
         .visit_null = visit_null,
         .visit_bool = visit_bool,
-        .visit_integer = visit_integer,
-        .visit_double = visit_double,
+        .visit_number = visit_number,
         .visit_string = visit_string,
         .visit_array_start = visit_array_start,
         .visit_array_end = visit_array_end,

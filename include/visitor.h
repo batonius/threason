@@ -21,30 +21,28 @@ typedef struct {
 } ThsnVisitorContext;
 
 typedef struct {
-    ThsnVisitorResult (*visit_integer)(ThsnVisitorContext* context,
-                                       void* user_data, long long value);
-    ThsnVisitorResult (*visit_double)(ThsnVisitorContext* context,
+    ThsnVisitorResult (*visit_number)(const ThsnVisitorContext* context,
                                       void* user_data, double value);
-    ThsnVisitorResult (*visit_null)(ThsnVisitorContext* context,
+    ThsnVisitorResult (*visit_null)(const ThsnVisitorContext* context,
                                     void* user_data);
-    ThsnVisitorResult (*visit_bool)(ThsnVisitorContext* context,
+    ThsnVisitorResult (*visit_bool)(const ThsnVisitorContext* context,
                                     void* user_data, bool value);
-    ThsnVisitorResult (*visit_string)(ThsnVisitorContext* context,
+    ThsnVisitorResult (*visit_string)(const ThsnVisitorContext* context,
                                       void* user_data, ThsnSlice value);
-    ThsnVisitorResult (*visit_array_start)(ThsnVisitorContext* context,
+    ThsnVisitorResult (*visit_array_start)(const ThsnVisitorContext* context,
                                            void* user_data);
-    ThsnVisitorResult (*visit_array_end)(ThsnVisitorContext* context,
+    ThsnVisitorResult (*visit_array_end)(const ThsnVisitorContext* context,
                                          void* user_data);
-    ThsnVisitorResult (*visit_object_start)(ThsnVisitorContext* context,
+    ThsnVisitorResult (*visit_object_start)(const ThsnVisitorContext* context,
                                             void* user_data);
-    ThsnVisitorResult (*visit_object_end)(ThsnVisitorContext* context,
+    ThsnVisitorResult (*visit_object_end)(const ThsnVisitorContext* context,
                                           void* user_data);
 } ThsnVisitorVTable;
 
 #define THSN_VISITOR_VTABLE_DEFAULT() \
     (ThsnVisitorVTable) {}
 
-ThsnResult thsn_visit(ThsnSlice parsed_data, ThsnVisitorVTable* vtable,
+ThsnResult thsn_visit(ThsnSlice parsed_data, const ThsnVisitorVTable* vtable,
                       void* user_data);
 
 #endif

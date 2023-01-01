@@ -1,5 +1,5 @@
 #include "slice.h"
-#include "tags.h"
+#include "value.h"
 #include "vector.h"
 #include "visitor.h"
 
@@ -11,7 +11,7 @@ typedef enum {
 static const ThsnVisitTag VISIT_TAG_ARRAY = THSN_VISIT_TAG_ARRAY;
 static const ThsnVisitTag VISIT_TAG_OBJECT_KV = THSN_VISIT_TAG_OBJECT_KV;
 
-ThsnResult thsn_visit(ThsnSlice parse_result, ThsnVisitorVTable* vtable,
+ThsnResult thsn_visit(ThsnSlice parse_result, const ThsnVisitorVTable* vtable,
                       void* user_data) {
 #define PROCESS_VISITOR_RESULT(result)              \
     do {                                            \
@@ -44,15 +44,6 @@ ThsnResult thsn_visit(ThsnSlice parse_result, ThsnVisitorVTable* vtable,
         }                                                               \
     } while (0)
 
-#define READ_SLICE_INTO_VAR(slice, var)                   \
-    do {                                                  \
-        if ((slice).size < sizeof(var)) {                 \
-            goto error_cleanup;                           \
-        }                                                 \
-        memcpy(&(var), (slice).data, sizeof(var));        \
-        thsn_slice_advance_unsafe(&(slice), sizeof(var)); \
-    } while (0)
-
     if (thsn_slice_is_empty(parse_result)) {
         return THSN_RESULT_SUCCESS;
     }
@@ -66,120 +57,74 @@ ThsnResult thsn_visit(ThsnSlice parse_result, ThsnVisitorVTable* vtable,
     ThsnVector stack = thsn_vector_make_empty();
     BAIL_ON_ERROR(thsn_vector_allocate(&stack, 1024));
     bool skip = false;
-    size_t next_offset = 0;
+    ThsnValueHandle current_value_handle = THSN_VALUE_HANDLE_FIRST;
     bool done_visiting = false;
 
     do {
-        ThsnSlice data_slice;
-        GOTO_ON_ERROR(thsn_slice_at_offset(parse_result, next_offset,
-                                           sizeof(char), &data_slice),
-                      error_cleanup);
-
-        char tag = thsn_slice_advance_char_unsafe(&data_slice);
-        switch (thsn_tag_type(tag)) {
-            case THSN_TAG_NULL:
+        ThsnValueType value_type;
+        GOTO_ON_ERROR(
+            thsn_value_type(parse_result, current_value_handle, &value_type),
+            error_cleanup);
+        switch (value_type) {
+            case THSN_VALUE_NULL:
                 CALL_VISITOR2(vtable->visit_null, &context, user_data);
                 break;
-            case THSN_TAG_BOOL:
-                CALL_VISITOR3(vtable->visit_bool, &context, user_data,
-                              thsn_tag_size(tag) != THSN_TAG_SIZE_FALSE);
-                break;
-            case THSN_TAG_SMALL_STRING: {
-                size_t string_size = thsn_tag_size(tag);
-                if (data_slice.size < string_size) {
-                    goto error_cleanup;
-                }
-                CALL_VISITOR3(vtable->visit_string, &context, user_data,
-                              thsn_slice_make(data_slice.data, string_size));
+            case THSN_VALUE_BOOL: {
+                bool value;
+                GOTO_ON_ERROR(thsn_value_read_bool(
+                                  parse_result, current_value_handle, &value),
+                              error_cleanup);
+                CALL_VISITOR3(vtable->visit_bool, &context, user_data, value);
                 break;
             }
-            case THSN_TAG_REF_STRING: {
-                ThsnSlice string_slice = thsn_slice_make_empty();
-
-                if (thsn_tag_size(tag) != THSN_TAG_SIZE_EMPTY) {
-                    READ_SLICE_INTO_VAR(data_slice, string_slice);
-                }
+            case THSN_VALUE_NUMBER: {
+                double value;
+                GOTO_ON_ERROR(thsn_value_read_number(
+                                  parse_result, current_value_handle, &value),
+                              error_cleanup);
+                CALL_VISITOR3(vtable->visit_number, &context, user_data, value);
+                break;
+            }
+            case THSN_VALUE_STRING: {
+                ThsnSlice string_slice;
+                GOTO_ON_ERROR(
+                    thsn_value_read_string(parse_result, current_value_handle,
+                                           &string_slice),
+                    error_cleanup);
                 CALL_VISITOR3(vtable->visit_string, &context, user_data,
                               string_slice);
                 break;
             }
-            case THSN_TAG_INT: {
-                long long value = 0;
-                switch (thsn_tag_size(tag)) {
-                    case THSN_TAG_SIZE_ZERO:
-                        break;
-                    case sizeof(int8_t): {
-                        int8_t int8_value;
-                        READ_SLICE_INTO_VAR(data_slice, int8_value);
-                        value = int8_value;
-                        break;
-                    }
-                    case sizeof(int16_t): {
-                        int16_t int16_value;
-                        READ_SLICE_INTO_VAR(data_slice, int16_value);
-                        value = int16_value;
-                        break;
-                    }
-                    case sizeof(int32_t): {
-                        int32_t int32_value;
-                        READ_SLICE_INTO_VAR(data_slice, int32_value);
-                        value = int32_value;
-                        break;
-                    }
-                    case sizeof(long long): {
-                        READ_SLICE_INTO_VAR(data_slice, value);
-                        break;
-                    }
-                    default:
-                        goto error_cleanup;
-                }
-                CALL_VISITOR3(vtable->visit_integer, &context, user_data,
-                              value);
-                break;
-            }
-            case THSN_TAG_DOUBLE: {
-                double value;
-                READ_SLICE_INTO_VAR(data_slice, value);
-                CALL_VISITOR3(vtable->visit_double, &context, user_data, value);
-                break;
-            }
-            case THSN_TAG_ARRAY: {
+            case THSN_VALUE_ARRAY: {
                 CALL_VISITOR2(vtable->visit_array_start, &context, user_data);
                 if (skip) {
                     break;
                 }
-                size_t elements_count = 0;
-                if (thsn_tag_size(tag) != THSN_TAG_SIZE_EMPTY) {
-                    size_t elements_table_offset = 0;
-                    READ_SLICE_INTO_VAR(data_slice, elements_count);
-                    READ_SLICE_INTO_VAR(data_slice, elements_table_offset);
-                    GOTO_ON_ERROR(
-                        THSN_VECTOR_PUSH_VAR(stack, elements_table_offset),
-                        error_cleanup);
-                }
-                GOTO_ON_ERROR(THSN_VECTOR_PUSH_3_VARS(stack, elements_count,
+                ThsnValueArrayTable array_table;
+                GOTO_ON_ERROR(
+                    thsn_value_read_array(parse_result, current_value_handle,
+                                          &array_table),
+                    error_cleanup);
+                GOTO_ON_ERROR(THSN_VECTOR_PUSH_3_VARS(stack, array_table,
                                                       context, VISIT_TAG_ARRAY),
                               error_cleanup);
                 break;
             }
-            case THSN_TAG_OBJECT: {
+            case THSN_VALUE_OBJECT: {
                 CALL_VISITOR2(vtable->visit_object_start, &context, user_data);
                 if (skip) {
                     break;
                 }
-                size_t elements_count = 0;
-                if (thsn_tag_size(tag) != THSN_TAG_SIZE_EMPTY) {
-                    size_t elements_table_offset = 0;
-                    READ_SLICE_INTO_VAR(data_slice, elements_count);
-                    READ_SLICE_INTO_VAR(data_slice, elements_table_offset);
-                    GOTO_ON_ERROR(
-                        THSN_VECTOR_PUSH_VAR(stack, elements_table_offset),
-                        error_cleanup);
-                }
+                ThsnValueObjectTable object_table;
                 GOTO_ON_ERROR(
-                    THSN_VECTOR_PUSH_3_VARS(stack, elements_count, context,
+                    thsn_value_read_object(parse_result, current_value_handle,
+                                           &object_table),
+                    error_cleanup);
+                GOTO_ON_ERROR(
+                    THSN_VECTOR_PUSH_3_VARS(stack, object_table, context,
                                             VISIT_TAG_OBJECT_KV),
                     error_cleanup);
+                break;
             }
         }
 
@@ -194,89 +139,51 @@ ThsnResult thsn_visit(ThsnSlice parse_result, ThsnVisitorVTable* vtable,
                           error_cleanup);
             switch (next_visit_tag) {
                 case THSN_VISIT_TAG_ARRAY: {
-                    size_t elements_count;
+                    ThsnValueArrayTable array_table;
                     GOTO_ON_ERROR(
-                        THSN_VECTOR_POP_2_VARS(stack, context, elements_count),
+                        THSN_VECTOR_POP_2_VARS(stack, context, array_table),
                         error_cleanup);
-                    if (elements_count == 0) {
+                    if (thsn_value_array_length(array_table) == 0) {
                         CALL_VISITOR2(vtable->visit_array_end, &context,
                                       user_data);
                         break;
                     }
-                    size_t element_offset_offset;
-                    GOTO_ON_ERROR(
-                        THSN_VECTOR_POP_VAR(stack, element_offset_offset),
-                        error_cleanup);
-                    ThsnSlice element_offset_slice;
-                    GOTO_ON_ERROR(thsn_slice_at_offset(
-                                      parse_result, element_offset_offset,
-                                      sizeof(size_t), &element_offset_slice),
+                    GOTO_ON_ERROR(thsn_value_array_consume_element(
+                                      &array_table, &current_value_handle),
                                   error_cleanup);
-                    size_t element_offset;
-                    READ_SLICE_INTO_VAR(element_offset_slice, element_offset);
-                    --elements_count;
-                    if (elements_count > 0) {
-                        element_offset_offset += sizeof(size_t);
-                        GOTO_ON_ERROR(
-                            THSN_VECTOR_PUSH_VAR(stack, element_offset_offset),
-                            error_cleanup);
-                    }
                     GOTO_ON_ERROR(
-                        THSN_VECTOR_PUSH_3_VARS(stack, elements_count, context,
+                        THSN_VECTOR_PUSH_3_VARS(stack, array_table, context,
                                                 VISIT_TAG_ARRAY),
                         error_cleanup);
-                    next_offset = element_offset;
                     context.in_object = false;
                     context.in_array = true;
-                    context.last = elements_count == 0;
+                    context.last = thsn_value_array_length(array_table) == 0;
                     context.key = thsn_slice_make_empty();
                     found_offset = true;
                     break;
                 }
                 case THSN_VISIT_TAG_OBJECT_KV: {
-                    size_t elements_count;
+                    ThsnValueObjectTable object_table;
                     GOTO_ON_ERROR(
-                        THSN_VECTOR_POP_2_VARS(stack, context, elements_count),
+                        THSN_VECTOR_POP_2_VARS(stack, context, object_table),
                         error_cleanup);
-                    if (elements_count == 0) {
+                    if (thsn_value_object_length(object_table) == 0) {
                         CALL_VISITOR2(vtable->visit_object_end, &context,
                                       user_data);
                         break;
                     }
-                    size_t kv_offset_offset;
-                    GOTO_ON_ERROR(THSN_VECTOR_POP_VAR(stack, kv_offset_offset),
+                    ThsnSlice key_slice;
+                    GOTO_ON_ERROR(thsn_value_object_consume_element(
+                                      parse_result, &object_table, &key_slice,
+                                      &current_value_handle),
                                   error_cleanup);
-                    ThsnSlice kv_offset_slice;
                     GOTO_ON_ERROR(
-                        thsn_slice_at_offset(parse_result, kv_offset_offset,
-                                             sizeof(size_t), &kv_offset_slice),
-                        error_cleanup);
-                    size_t kv_offset;
-                    READ_SLICE_INTO_VAR(kv_offset_slice, kv_offset);
-                    --elements_count;
-                    if (elements_count > 0) {
-                        kv_offset_offset += sizeof(size_t);
-                        GOTO_ON_ERROR(
-                            THSN_VECTOR_PUSH_VAR(stack, kv_offset_offset),
-                            error_cleanup);
-                    }
-                    GOTO_ON_ERROR(
-                        THSN_VECTOR_PUSH_3_VARS(stack, elements_count, context,
+                        THSN_VECTOR_PUSH_3_VARS(stack, object_table, context,
                                                 VISIT_TAG_OBJECT_KV),
                         error_cleanup);
-                    ThsnSlice kv_slice;
-                    GOTO_ON_ERROR(thsn_slice_at_offset(parse_result, kv_offset,
-                                                       sizeof(char), &kv_slice),
-                                  error_cleanup);
-                    ThsnSlice key_slice = thsn_slice_make_empty();
-                    size_t value_offset = 0;
-                    GOTO_ON_ERROR(thsn_slice_read_string(kv_slice, &key_slice,
-                                                         &value_offset),
-                                  error_cleanup);
-                    value_offset += kv_offset;
-                    next_offset = value_offset;
+
                     context.in_array = false;
-                    context.last = elements_count == 0;
+                    context.last = thsn_value_object_length(object_table) == 0;
                     context.key = key_slice;
                     context.in_object = true;
                     found_offset = true;
@@ -297,5 +204,4 @@ error_cleanup:
 #undef CALL_VISITOR2
 #undef CALL_VISITOR3
 #undef PROCESS_VISITOR_RESULT
-#undef READ_SLICE_INTO_VAR
 }
