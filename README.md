@@ -10,5 +10,9 @@ I ended up reimplementing basic stuff from Rust's stdlib like slices, `Result` a
 The original technical goal was to experiment with multi-threaded JSON parsing, thus *threa*son.
 This isn't done (yet?), mostly because I keep reiterating on the single-threaded version.
 
+## Tools used
+As an experiment most of the code was written in Linux framebuffer console using Zellij, Helix, clangd and clang-format, with no graphical environment whatsoever.
+The experience is surprisingly pleasant and unsurprisingly disctraction-free.
+
 ## Benchmarks
 Incoming.

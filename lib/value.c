@@ -130,32 +130,7 @@ static ThsnResult thsn_value_read_string_ex(ThsnSlice data_slice,
     ThsnSlice value_slice;
     BAIL_ON_ERROR(thsn_slice_at_offset(data_slice, value_handle,
                                        sizeof(ThsnTag), &value_slice));
-    ThsnTag value_tag;
-    BAIL_ON_ERROR(THSN_SLICE_READ_VAR(value_slice, value_tag));
-    switch (thsn_tag_type(value_tag)) {
-        case THSN_TAG_SMALL_STRING: {
-            const size_t string_length = thsn_tag_size(value_tag);
-            *string_slice = value_slice;
-            BAIL_ON_ERROR(thsn_slice_truncate(string_slice, string_length));
-            if (consumed_size != NULL) {
-                *consumed_size = sizeof(ThsnTag) + string_length;
-            }
-            break;
-        }
-        case THSN_TAG_REF_STRING: {
-            if (thsn_tag_size(value_tag) != THSN_TAG_SIZE_INBOUND) {
-                return THSN_RESULT_INPUT_ERROR;
-            }
-            BAIL_ON_ERROR(THSN_SLICE_READ_VAR(value_slice, *string_slice));
-            if (consumed_size != NULL) {
-                *consumed_size = sizeof(ThsnTag) + sizeof(ThsnSlice);
-            }
-            break;
-        }
-        default:
-            return THSN_RESULT_INPUT_ERROR;
-    }
-    return THSN_RESULT_SUCCESS;
+    return thsn_slice_read_string(value_slice, string_slice, consumed_size);
 }
 
 ThsnResult thsn_value_read_string(ThsnSlice data_slice,

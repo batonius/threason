@@ -129,21 +129,19 @@ inline ThsnResult thsn_slice_read_string(ThsnSlice stored_string_slice,
     *string_slice = thsn_slice_make_empty();
     switch (thsn_tag_type(key_str_tag)) {
         case THSN_TAG_REF_STRING:
-            if (thsn_tag_size(key_str_tag) != THSN_TAG_SIZE_EMPTY) {
-                BAIL_ON_ERROR(
-                    THSN_SLICE_READ_VAR(stored_string_slice, *string_slice));
+            if (thsn_tag_size(key_str_tag) != THSN_TAG_SIZE_INBOUND) {
+                return THSN_RESULT_INPUT_ERROR;
             }
+            BAIL_ON_ERROR(
+                THSN_SLICE_READ_VAR(stored_string_slice, *string_slice));
             if (stored_length != NULL) {
-                *stored_length = sizeof(ThsnTag) + sizeof(*string_slice);
+                *stored_length = sizeof(ThsnTag) + sizeof(ThsnSlice);
             }
             break;
         case THSN_TAG_SMALL_STRING: {
             size_t key_str_size = thsn_tag_size(key_str_tag);
-            if (stored_string_slice.size < key_str_size) {
-                return THSN_RESULT_INPUT_ERROR;
-            }
-            *string_slice =
-                thsn_slice_make(stored_string_slice.data, key_str_size);
+            *string_slice = stored_string_slice;
+            BAIL_ON_ERROR(thsn_slice_truncate(string_slice, key_str_size));
             if (stored_length != NULL) {
                 *stored_length = sizeof(ThsnTag) + key_str_size;
             }
