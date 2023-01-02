@@ -1,11 +1,7 @@
 #ifndef THSN_RESULT_H
 #define THSN_RESULT_H
 
-typedef enum {
-    THSN_RESULT_SUCCESS,
-    THSN_RESULT_OUT_OF_MEMORY_ERROR,
-    THSN_RESULT_INPUT_ERROR,
-} ThsnResult;
+#include "threason.h"
 
 #define BAIL_ON_NULL_INPUT(v)               \
     do {                                    \

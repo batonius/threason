@@ -1,5 +1,4 @@
 #include "slice.h"
-#include "value.h"
 #include "vector.h"
 #include "visitor.h"
 
@@ -7,9 +6,6 @@ typedef enum {
     THSN_VISIT_TAG_ARRAY,
     THSN_VISIT_TAG_OBJECT_KV,
 } ThsnVisitTag;
-
-static const ThsnVisitTag VISIT_TAG_ARRAY = THSN_VISIT_TAG_ARRAY;
-static const ThsnVisitTag VISIT_TAG_OBJECT_KV = THSN_VISIT_TAG_OBJECT_KV;
 
 ThsnResult thsn_visit(ThsnSlice parse_result, const ThsnVisitorVTable* vtable,
                       void* user_data) {
@@ -53,7 +49,8 @@ ThsnResult thsn_visit(ThsnSlice parse_result, const ThsnVisitorVTable* vtable,
         .in_array = false,
         .last = false,
     };
-
+    const ThsnVisitTag VISIT_TAG_ARRAY = THSN_VISIT_TAG_ARRAY;
+    const ThsnVisitTag VISIT_TAG_OBJECT_KV = THSN_VISIT_TAG_OBJECT_KV;
     ThsnVector stack = thsn_vector_make_empty();
     BAIL_ON_ERROR(thsn_vector_allocate(&stack, 1024));
     bool skip = false;

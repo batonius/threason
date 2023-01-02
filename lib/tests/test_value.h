@@ -1,18 +1,16 @@
 #ifndef THSN_TEST_VALUE_H
 #define THSN_TEST_VALUE_H
 
-#include "parser.h"
 #include "testing.h"
-#include "value.h"
+#include "threason.h"
 #include "vector.h"
 
 TEST(indexes_object_by_key) {
     const char* object_str = "{ \"abc\": 12, \"xyz\":34, \"000\": 56}";
     ThsnSlice object_str_slice;
     ASSERT_SUCCESS(thsn_slice_from_c_str(object_str, &object_str_slice));
-    ThsnVector parse_result = thsn_vector_make_empty();
-    ASSERT_SUCCESS(thsn_parse_value(&object_str_slice, &parse_result));
-    ThsnSlice result_slice = thsn_vector_as_slice(parse_result);
+    ThsnSlice result_slice;
+    ASSERT_SUCCESS(thsn_parse_json(&object_str_slice, &result_slice));
     ThsnValueType value_type;
     ASSERT_SUCCESS(
         thsn_value_type(result_slice, THSN_VALUE_HANDLE_FIRST, &value_type));

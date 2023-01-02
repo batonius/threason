@@ -1,7 +1,8 @@
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
-#include "parser.h"
-#include "visitor.h"
+#include "threason.h"
 
 ThsnVisitorResult visit_number(const ThsnVisitorContext* context,
                                void* user_data, double value) {
@@ -114,50 +115,36 @@ int main(int argc, char** argv) {
     if (argc > 1) {
         file = fopen(argv[1], "rb");
     }
-
-    ThsnVector input_data = thsn_vector_make_empty();
-    if (thsn_vector_allocate(&input_data, 1024) != THSN_RESULT_SUCCESS) {
-        fprintf(stderr, "Can't allocate input storage\n");
-        goto error_cleanup;
-    }
+    char* json_str = NULL;
+    size_t json_str_len = 0;
     char buffer[1024];
-    while (true) {
-        size_t read_result = fread(buffer, 1, sizeof(buffer), file);
-        if (read_result == 0) {
+    do {
+        size_t read_len = fread(buffer, 1, 1024, file);
+        if (read_len == 0) {
             break;
         }
-        if (thsn_vector_push(&input_data,
-                             thsn_slice_make(buffer, read_result)) !=
-            THSN_RESULT_SUCCESS) {
-            fprintf(stderr, "Can't append to input storage\n");
-            goto error_cleanup;
-        }
-    }
+        json_str = realloc(json_str, json_str_len + read_len);
+        memcpy(json_str + json_str_len, buffer, read_len);
+        json_str_len += read_len;
+    } while (true);
+    fprintf(stderr, "Read %zu bytes.\n", json_str_len);
+    ThsnSlice input_slice = {.data = json_str, .size = json_str_len};
+    ThsnParsedJson parsed_json;
 
-    ThsnVector parse_result = thsn_vector_make_empty();
-    if (thsn_vector_allocate(&parse_result, 1024) != THSN_RESULT_SUCCESS) {
-        fprintf(stderr, "Can't allocate parse result storage\n");
-        goto error_cleanup;
-    }
-    ThsnSlice input_slice = thsn_vector_as_slice(input_data);
-    if (thsn_parse_value(&input_slice, &parse_result) != THSN_RESULT_SUCCESS) {
+    if (thsn_parse_json(&input_slice, &parsed_json) != THSN_RESULT_SUCCESS) {
         fprintf(stderr, "Can't parse input string\n");
-        goto error_cleanup;
+        return 1;
     }
-    fprintf(stderr, "Parse result size: %zu\n",
-            thsn_vector_current_offset(parse_result));
-    if (thsn_visit(thsn_vector_as_slice(parse_result), &visitor_vtable, NULL) !=
-        THSN_RESULT_SUCCESS) {
+    fprintf(stderr, "Parse result size: %zu\n", parsed_json.size);
+    if (thsn_visit(parsed_json, &visitor_vtable, NULL) != THSN_RESULT_SUCCESS) {
         fprintf(stderr, "\nCan't visit parse result\n");
         goto error_cleanup;
     }
     printf("\n");
-    thsn_vector_free(&parse_result);
-    thsn_vector_free(&input_data);
+    thsn_free_parsed_json(&parsed_json);
     return 0;
 
 error_cleanup:
-    thsn_vector_free(&parse_result);
-    thsn_vector_free(&input_data);
+    thsn_free_parsed_json(&parsed_json);
     return 1;
 }

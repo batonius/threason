@@ -6,11 +6,7 @@
 #include <string.h>
 
 #include "result.h"
-
-typedef struct {
-    size_t size;
-    const char* data;
-} ThsnSlice;
+#include "threason.h"
 
 typedef struct {
     size_t size;

@@ -1,9 +1,10 @@
 #include <stdlib.h>
 
-#include "parser.h"
+#include "result.h"
 #include "slice.h"
 #include "tags.h"
 #include "tokenizer.h"
+#include "vector.h"
 
 typedef enum {
     THSN_PARSER_STATE_VALUE,
@@ -61,7 +62,8 @@ static ThsnResult thsn_atod_checked(ThsnSlice slice, double* result) {
                                         : THSN_RESULT_SUCCESS;
 }
 
-int thsn_parser_compare_kv_keys(const void* a, const void* b, void* data) {
+static int thsn_parser_compare_kv_keys(const void* a, const void* b,
+                                       void* data) {
     size_t a_offset;
     size_t b_offset;
     memcpy(&a_offset, a, sizeof(size_t));
@@ -324,8 +326,8 @@ static ThsnResult thsn_parser_parse_kv_end(ThsnToken token,
     return THSN_RESULT_SUCCESS;
 }
 
-ThsnResult thsn_parse_value(ThsnSlice* /*in/out*/ buffer_slice,
-                            ThsnVector* /*in/out*/ result_vector) {
+static ThsnResult thsn_parse_value(ThsnSlice* /*in/out*/ buffer_slice,
+                                   ThsnVector* /*in/out*/ result_vector) {
     BAIL_ON_NULL_INPUT(buffer_slice);
     BAIL_ON_NULL_INPUT(result_vector);
     ThsnSlice token_slice;
@@ -398,4 +400,21 @@ ThsnResult thsn_parse_value(ThsnSlice* /*in/out*/ buffer_slice,
 error_cleanup:
     thsn_vector_free(&parser_status.stack);
     return THSN_RESULT_INPUT_ERROR;
+}
+
+ThsnResult thsn_parse_json(ThsnSlice* /*in/out*/ buffer_slice,
+                           ThsnSlice* /*out*/ parsed_json) {
+    BAIL_ON_NULL_INPUT(buffer_slice);
+    BAIL_ON_NULL_INPUT(parsed_json);
+    ThsnVector result_vector = thsn_vector_make_empty();
+    BAIL_ON_ERROR(thsn_parse_value(buffer_slice, &result_vector));
+    *parsed_json = thsn_vector_as_slice(result_vector);
+    return THSN_RESULT_SUCCESS;
+}
+
+ThsnResult thsn_free_parsed_json(ThsnSlice* /*in/out*/ parsed_json) {
+    BAIL_ON_NULL_INPUT(parsed_json);
+    free((char*)parsed_json->data);
+    *parsed_json = thsn_slice_make_empty();
+    return THSN_RESULT_SUCCESS;
 }

@@ -1,7 +1,7 @@
 CC=clang
 AR=ar
 CFLAGS=-Wall -Wextra -Werror -pedantic -std=c2x -march=native \
-	 -D_POSIX_C_SOURCE=200809 -D_GNU_SOURCE -Iinclude -flto -Ilib
+	 -D_POSIX_C_SOURCE=200809 -D_GNU_SOURCE -Iinclude -flto 
 LDFLAGS=
 BUILD-DIR=build
 SRC-DIR=lib
@@ -12,6 +12,8 @@ SRCS=$(notdir $(wildcard $(SRC-DIR)/*.c))
 OBJS=$(addprefix $(BUILD-DIR)/, $(patsubst %.c,%.o,$(SRCS)))
 TEST-SRCS=$(notdir $(wildcard $(TEST-DIR)/*.c))
 TEST-BINS=$(patsubst %.c,%,$(TEST-SRCS))
+BIN-SRCS=$(notdir $(wildcard $(BIN-DIR)/*.c))
+BIN-BINS=$(patsubst %.c,%,$(BIN-SRCS))
 
 ifdef GCC 
 	CC=gcc
@@ -40,13 +42,13 @@ endif
 
 .PHONY: all clean tests
 
-all: tests
+all: $(LIB-AR) tests bins
 
 $(BUILD-DIR):
 	mkdir $(BUILD-DIR)
 
 $(BUILD-DIR)/%.o: $(SRC-DIR)/%.c | $(BUILD-DIR)
-	$(CC) $(CFLAGS) -c $< -o $@
+	$(CC) $(CFLAGS) -I$(SRC-DIR) -c $< -o $@
 
 $(LIB-AR): $(OBJS)
 	$(AR) cr $@ $^
@@ -55,9 +57,11 @@ $(BUILD-DIR)/%: $(BIN-DIR)/%.c $(LIB-AR)
 	$(CC) $(CFLAGS) $(LDFLAGS) $^ -o $@
 
 $(BUILD-DIR)/%: $(TEST-DIR)/%.c $(OBJS)
-	$(CC) $(CFLAGS) $(LDFLAGS) $^ -o $@
+	$(CC) $(CFLAGS) -I$(SRC-DIR) $(LDFLAGS) $^ -o $@
  
-tests: $(addprefix $(BUILD-DIR)/, $(TEST-BINS)) | $(BUILD_DIR)
+tests: $(addprefix $(BUILD-DIR)/, $(TEST-BINS))
+
+bins: $(addprefix $(BUILD-DIR)/, $(BIN-BINS)) 
 	
 clean:
 	rm -rf $(BUILD-DIR)
