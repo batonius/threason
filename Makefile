@@ -1,7 +1,7 @@
 CC=clang
 AR=ar
 CFLAGS=-Wall -Wextra -Werror -pedantic -std=c2x -march=native \
-	 -D_POSIX_C_SOURCE=200809 -D_GNU_SOURCE -Iinclude -flto 
+       -D_GNU_SOURCE -Iinclude -flto 
 LDFLAGS=
 BUILD-DIR=build
 SRC-DIR=lib
