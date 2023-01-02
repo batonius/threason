@@ -58,7 +58,7 @@ ThsnResult thsn_visit(ThsnSlice parse_result, const ThsnVisitorVTable* vtable,
     bool done_visiting = false;
 
     do {
-        ThsnValueType value_type;
+        ThsnValueType value_type = THSN_VALUE_NULL;
         GOTO_ON_ERROR(
             thsn_value_type(parse_result, current_value_handle, &value_type),
             error_cleanup);

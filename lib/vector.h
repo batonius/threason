@@ -62,7 +62,7 @@ inline ThsnResult thsn_vector_grow(ThsnVector* /*in/out*/ vector,
     BAIL_ON_NULL_INPUT(vector);
     const size_t allocated_space_left = thsn_vector_space_left(*vector);
     if (allocated_space_left < data_size) {
-        const size_t addr_space_left = SIZE_MAX - vector->offset;
+        const size_t addr_space_left = PTRDIFF_MAX - vector->offset;
         if (addr_space_left < data_size) {
             return THSN_RESULT_OUT_OF_MEMORY_ERROR;
         }

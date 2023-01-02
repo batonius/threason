@@ -57,7 +57,7 @@ TEST(shrinks_vector) {
     ASSERT_EQ(thsn_vector_space_left(vector), 960);
     ASSERT_SUCCESS(thsn_vector_shrink(&vector, 20, NULL));
     ASSERT_EQ(thsn_vector_space_left(vector), 980);
-    ThsnSlice slice;
+    ThsnSlice slice = thsn_slice_make_empty();
     ASSERT_SUCCESS(thsn_vector_shrink(&vector, 20, &slice));
     ASSERT_EQ(thsn_vector_space_left(vector), 1000);
     ASSERT_EQ(slice.size, 20);
@@ -95,7 +95,7 @@ TEST(returns_slice_at_offset) {
     ThsnVector vector = thsn_vector_make_empty();
     ASSERT_SUCCESS(thsn_vector_allocate(&vector, 1024));
     ASSERT_SUCCESS(THSN_VECTOR_PUSH_VAR(vector, array));
-    ThsnSlice slice;
+    ThsnSlice slice = thsn_slice_make_empty();
     ASSERT_SUCCESS(thsn_vector_slice_at_offset(vector, 1, 20, &slice));
     ASSERT_EQ(slice.size, 20);
     char x = 0;
@@ -117,7 +117,7 @@ TEST(returns_mut_slice_at_offset) {
     ASSERT_SUCCESS(thsn_vector_allocate(&vector, 1024));
     ASSERT_SUCCESS(THSN_VECTOR_PUSH_VAR(vector, array));
     ASSERT_EQ(*(vector.buffer + 1), 2);
-    ThsnMutSlice mut_slice;
+    ThsnMutSlice mut_slice = thsn_mut_slice_make_empty();
     ASSERT_SUCCESS(thsn_vector_mut_slice_at_offset(vector, 1, 2, &mut_slice));
     ASSERT_EQ(mut_slice.size, 2);
     char x = 20;

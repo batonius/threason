@@ -7,6 +7,7 @@ BUILD-DIR=build
 SRC-DIR=lib
 BIN-DIR=bin
 TEST-DIR=lib/tests
+DOCS-DIR=docs
 LIB-AR=$(BUILD-DIR)/libthreason.a
 SRCS=$(notdir $(wildcard $(SRC-DIR)/*.c))
 OBJS=$(addprefix $(BUILD-DIR)/, $(patsubst %.c,%.o,$(SRCS)))
@@ -62,6 +63,10 @@ $(BUILD-DIR)/%: $(TEST-DIR)/%.c $(OBJS)
 tests: $(addprefix $(BUILD-DIR)/, $(TEST-BINS))
 
 bins: $(addprefix $(BUILD-DIR)/, $(BIN-BINS)) 
+
+$(DOCS-DIR):
+	doxygen
 	
 clean:
 	rm -rf $(BUILD-DIR)
+	rm -rf $(DOCS-DIR)

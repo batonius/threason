@@ -25,6 +25,8 @@ bool thsn_slice_try_consume_char(ThsnSlice* /*in/out*/ slice, char* /*out*/ c);
 
 ThsnMutSlice thsn_mut_slice_make(char* data, size_t size);
 
+ThsnMutSlice thsn_mut_slice_make_empty();
+
 ThsnResult thsn_mut_slice_write(ThsnMutSlice* /*in/out*/ mut_slice,
                                 ThsnSlice data_slice);
 

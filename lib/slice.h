@@ -85,6 +85,10 @@ inline ThsnMutSlice thsn_mut_slice_make(char* data, size_t size) {
     return (ThsnMutSlice){.data = data, .size = size};
 }
 
+inline ThsnMutSlice thsn_mut_slice_make_empty() {
+    return (ThsnMutSlice){.data = NULL, .size = 0};
+}
+
 #define THSN_MUT_SLICE_FROM_VAR(v) thsn_mut_slice_make((char*)&(v), sizeof(v))
 
 inline ThsnResult thsn_mut_slice_write(ThsnMutSlice* /*in/out*/ mut_slice,

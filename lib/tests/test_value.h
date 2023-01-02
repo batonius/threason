@@ -11,7 +11,7 @@ TEST(indexes_object_by_key) {
     ASSERT_SUCCESS(thsn_slice_from_c_str(object_str, &object_str_slice));
     ThsnSlice result_slice;
     ASSERT_SUCCESS(thsn_parse_json(&object_str_slice, &result_slice));
-    ThsnValueType value_type;
+    ThsnValueType value_type = THSN_VALUE_NULL;
     ASSERT_SUCCESS(
         thsn_value_type(result_slice, THSN_VALUE_HANDLE_FIRST, &value_type));
     ASSERT_EQ(value_type, THSN_VALUE_OBJECT);
@@ -29,15 +29,15 @@ TEST(indexes_object_by_key) {
          ++i) {
         ThsnSlice key_slice;
         ASSERT_SUCCESS(thsn_slice_from_c_str(existing_keys[i].key, &key_slice));
-        ThsnValueHandle element_handle;
+        ThsnValueHandle element_handle = THSN_VALUE_HANDLE_NOT_FOUND;
         ASSERT_SUCCESS(thsn_value_object_index(result_slice, object_table,
                                                key_slice, &element_handle));
         ASSERT_NEQ(element_handle, THSN_VALUE_HANDLE_NOT_FOUND);
-        ThsnValueType element_type;
+        ThsnValueType element_type = THSN_VALUE_NULL;
         ASSERT_SUCCESS(
             thsn_value_type(result_slice, element_handle, &element_type));
         ASSERT_EQ(element_type, THSN_VALUE_NUMBER);
-        double number;
+        double number = 0.0;
         ASSERT_SUCCESS(
             thsn_value_read_number(result_slice, element_handle, &number));
         ASSERT_EQ(number, existing_keys[i].expected);
