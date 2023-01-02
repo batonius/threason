@@ -4,95 +4,89 @@
 
 #include "threason.h"
 
-ThsnVisitorResult visit_number(const ThsnVisitorContext* context,
-                               void* user_data, double value) {
-    (void)user_data;
+void print_offset(size_t offset) {
+    for (size_t i = 0; i < offset; ++i) {
+        printf("    ");
+    }
+}
+
+void print_prefix(const ThsnVisitorContext* context, size_t offset) {
+    print_offset(offset);
     if (context->in_object) {
         printf("\"%.*s\": ", (int)context->key.size, context->key.data);
     }
-    printf("%g", value);
+}
+
+void print_postfix(const ThsnVisitorContext* context) {
     if ((context->in_array || context->in_object) && !context->last) {
         printf(", ");
     }
+    printf("\n");
+}
+
+ThsnVisitorResult visit_number(const ThsnVisitorContext* context,
+                               void* user_data, double value) {
+    print_prefix(context, *(size_t*)user_data);
+    printf("%g", value);
+    print_postfix(context);
     return THSN_VISITOR_RESULT_CONTINUE;
 }
 
 ThsnVisitorResult visit_null(const ThsnVisitorContext* context,
                              void* user_data) {
-    (void)user_data;
-    if (context->in_object) {
-        printf("\"%.*s\": ", (int)context->key.size, context->key.data);
-    }
+    print_prefix(context, *(size_t*)user_data);
     printf("null");
-    if ((context->in_array || context->in_object) && !context->last) {
-        printf(", ");
-    }
+    print_postfix(context);
     return THSN_VISITOR_RESULT_CONTINUE;
 }
 
 ThsnVisitorResult visit_bool(const ThsnVisitorContext* context, void* user_data,
                              bool value) {
-    (void)user_data;
-    if (context->in_object) {
-        printf("\"%.*s\": ", (int)context->key.size, context->key.data);
-    }
+    print_prefix(context, *(size_t*)user_data);
     printf("%s", value ? "true" : "false");
-    if ((context->in_array || context->in_object) && !context->last) {
-        printf(", ");
-    }
+    print_postfix(context);
     return THSN_VISITOR_RESULT_CONTINUE;
 }
 
 ThsnVisitorResult visit_string(const ThsnVisitorContext* context,
                                void* user_data, ThsnSlice value) {
-    (void)user_data;
-    if (context->in_object) {
-        printf("\"%.*s\": ", (int)context->key.size, context->key.data);
-    }
+    print_prefix(context, *(size_t*)user_data);
     printf("\"%.*s\"", (int)value.size, value.data);
-    if ((context->in_array || context->in_object) && !context->last) {
-        printf(", ");
-    }
+    print_postfix(context);
     return THSN_VISITOR_RESULT_CONTINUE;
 }
 
 ThsnVisitorResult visit_array_start(const ThsnVisitorContext* context,
                                     void* user_data) {
-    (void)user_data;
-    if (context->in_object) {
-        printf("\"%.*s\": ", (int)context->key.size, context->key.data);
-    }
-    printf("[");
+    print_prefix(context, *(size_t*)user_data);
+    printf("[\n");
+    (*(size_t*)user_data)++;
     return THSN_VISITOR_RESULT_CONTINUE;
 }
 
 ThsnVisitorResult visit_array_end(const ThsnVisitorContext* context,
                                   void* user_data) {
-    (void)user_data;
+    (*(size_t*)user_data)--;
+    print_offset(*(size_t*)user_data);
     printf("]");
-    if ((context->in_array || context->in_object) && !context->last) {
-        printf(", ");
-    }
+    print_postfix(context);
     return THSN_VISITOR_RESULT_CONTINUE;
 }
 
 ThsnVisitorResult visit_object_start(const ThsnVisitorContext* context,
                                      void* user_data) {
-    (void)user_data;
-    if (context->in_object) {
-        printf("\"%.*s\": ", (int)context->key.size, context->key.data);
-    }
-    printf("{");
+    print_prefix(context, *(size_t*)user_data);
+    printf("{\n");
+    (*(size_t*)user_data)++;
     return THSN_VISITOR_RESULT_CONTINUE;
 }
 
 ThsnVisitorResult visit_object_end(const ThsnVisitorContext* context,
                                    void* user_data) {
-    (void)user_data;
+    (*(size_t*)user_data)--;
+    print_offset(*(size_t*)user_data);
     printf("}");
-    if ((context->in_array || context->in_object) && !context->last) {
-        printf(", ");
-    }
+    print_postfix(context);
     return THSN_VISITOR_RESULT_CONTINUE;
 }
 
@@ -136,7 +130,9 @@ int main(int argc, char** argv) {
         return 1;
     }
     fprintf(stderr, "Parse result size: %zu\n", parsed_json.size);
-    if (thsn_visit(parsed_json, &visitor_vtable, NULL) != THSN_RESULT_SUCCESS) {
+    size_t offset = 0;
+    if (thsn_visit(parsed_json, &visitor_vtable, (void*)&offset) !=
+        THSN_RESULT_SUCCESS) {
         fprintf(stderr, "\nCan't visit parse result\n");
         goto error_cleanup;
     }
