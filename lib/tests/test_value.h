@@ -53,6 +53,7 @@ TEST(indexes_object_by_key) {
                                                key_slice, &element_handle));
         ASSERT_EQ(element_handle, THSN_VALUE_HANDLE_NOT_FOUND);
     }
+    thsn_free_parsed_json(&result_slice);
 }
 
 /* clang-format off */

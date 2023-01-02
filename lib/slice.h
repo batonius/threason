@@ -60,6 +60,11 @@ inline void thsn_slice_advance_unsafe(ThsnSlice* /*in/out*/ slice,
     slice->size -= step;
 }
 
+inline void thsn_slice_rewind_unsafe(ThsnSlice* /*in/out*/ slice, size_t step) {
+    slice->data -= step;
+    slice->size += step;
+}
+
 inline char thsn_slice_advance_char_unsafe(ThsnSlice* /*in/out*/ slice) {
     --slice->size;
     return *slice->data++;
@@ -85,6 +90,10 @@ inline ThsnMutSlice thsn_mut_slice_make(char* data, size_t size) {
 inline ThsnResult thsn_mut_slice_write(ThsnMutSlice* /*in/out*/ mut_slice,
                                        ThsnSlice data_slice) {
     BAIL_ON_NULL_INPUT(mut_slice);
+
+    if (data_slice.size == 0) {
+        return THSN_RESULT_SUCCESS;
+    }
 
     if (mut_slice->size < data_slice.size) {
         return THSN_RESULT_INPUT_ERROR;

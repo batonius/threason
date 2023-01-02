@@ -142,9 +142,11 @@ int main(int argc, char** argv) {
     }
     printf("\n");
     thsn_free_parsed_json(&parsed_json);
+    free(json_str);
     return 0;
 
 error_cleanup:
     thsn_free_parsed_json(&parsed_json);
+    free(json_str);
     return 1;
 }

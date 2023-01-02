@@ -9,6 +9,7 @@ TEST(makes_empty_vector) {
     ASSERT_EQ(thsn_vector_space_left(vector), 0);
     ASSERT_EQ(thsn_vector_current_offset(vector), 0);
     ASSERT_EQ(thsn_vector_is_empty(vector), true);
+    ASSERT_SUCCESS(thsn_vector_free(&vector));
 }
 
 TEST(allocates_vector) {
@@ -21,6 +22,7 @@ TEST(allocates_vector) {
     ASSERT_EQ(thsn_vector_current_offset(vector), 0);
     ASSERT_EQ(thsn_vector_is_empty(vector), true);
     ASSERT_INPUT_ERROR(thsn_vector_allocate(NULL, 1024));
+    ASSERT_SUCCESS(thsn_vector_free(&vector));
 }
 
 TEST(frees_vector) {
@@ -28,6 +30,7 @@ TEST(frees_vector) {
     ASSERT_SUCCESS(thsn_vector_allocate(&vector, 1024));
     ASSERT_SUCCESS(thsn_vector_free(&vector));
     ASSERT_INPUT_ERROR(thsn_vector_free(NULL));
+    ASSERT_SUCCESS(thsn_vector_free(&vector));
 }
 
 TEST(grows_vector) {
@@ -43,6 +46,7 @@ TEST(grows_vector) {
     ASSERT_INPUT_ERROR(thsn_vector_grow(NULL, 1024, NULL));
     ASSERT_EQ(thsn_vector_grow(&vector, SIZE_MAX, NULL),
               THSN_RESULT_OUT_OF_MEMORY_ERROR);
+    ASSERT_SUCCESS(thsn_vector_free(&vector));
 }
 
 TEST(shrinks_vector) {
@@ -59,6 +63,7 @@ TEST(shrinks_vector) {
     ASSERT_EQ(slice.size, 20);
     ASSERT_NEQ(slice.data, NULL);
     ASSERT_INPUT_ERROR(thsn_vector_shrink(NULL, 10, NULL));
+    ASSERT_SUCCESS(thsn_vector_free(&vector));
 }
 
 TEST(pushes_and_pops) {
@@ -82,6 +87,7 @@ TEST(pushes_and_pops) {
     ASSERT_EQ(c, 3);
     ASSERT_EQ(d, 4);
     ASSERT_INPUT_ERROR(THSN_VECTOR_POP_VAR(vector, a));
+    ASSERT_SUCCESS(thsn_vector_free(&vector));
 }
 
 TEST(returns_slice_at_offset) {
@@ -92,7 +98,7 @@ TEST(returns_slice_at_offset) {
     ThsnSlice slice;
     ASSERT_SUCCESS(thsn_vector_slice_at_offset(vector, 1, 20, &slice));
     ASSERT_EQ(slice.size, 20);
-    char x;
+    char x = 0;
     ASSERT_SUCCESS(THSN_SLICE_READ_VAR(slice, x));
     ASSERT_EQ(x, 2);
     ASSERT_SUCCESS(THSN_SLICE_READ_VAR(slice, x));
@@ -102,6 +108,7 @@ TEST(returns_slice_at_offset) {
         thsn_vector_slice_at_offset(vector, 1, 1024 * 1024, &slice));
     ASSERT_INPUT_ERROR(
         thsn_vector_slice_at_offset(vector, 1024 * 1024, 1, &slice));
+    ASSERT_SUCCESS(thsn_vector_free(&vector));
 }
 
 TEST(returns_mut_slice_at_offset) {
@@ -120,6 +127,7 @@ TEST(returns_mut_slice_at_offset) {
         thsn_vector_mut_slice_at_offset(vector, 1, 3, &mut_slice));
     ASSERT_INPUT_ERROR(
         thsn_vector_mut_slice_at_offset(vector, 3, 1, &mut_slice));
+    ASSERT_SUCCESS(thsn_vector_free(&vector));
 }
 
 /* clang-format off */

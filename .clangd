@@ -1,2 +1,2 @@
 CompileFlags:
-	Add: [-xc, -std=c2x, -pedantic, -Wall, -Wextra, -Werror, -D_GNU_SOURCE, -I./include, -I../include, -I./lib, -I./src]
+	Add: [-xc, -std=c2x, -pedantic, -Wall, -Wextra, -Werror, -D_GNU_SOURCE, -I./include, -I../include, -I../../include, -I./lib, -I./src, -I., -I..]

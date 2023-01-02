@@ -17,6 +17,8 @@ bool thsn_slice_is_empty(ThsnSlice slice);
 
 void thsn_slice_advance_unsafe(ThsnSlice* /*in/out*/ slice, size_t step);
 
+void thsn_slice_rewind_unsafe(ThsnSlice* /*in/out*/ slice, size_t step);
+
 char thsn_slice_advance_char_unsafe(ThsnSlice* /*in/out*/ slice);
 
 bool thsn_slice_try_consume_char(ThsnSlice* /*in/out*/ slice, char* /*out*/ c);

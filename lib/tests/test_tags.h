@@ -13,6 +13,7 @@ TEST(stores_null) {
     ASSERT_EQ(vector.offset, 1);
     ASSERT_EQ(vector.buffer[0],
               thsn_tag_make(THSN_TAG_NULL, THSN_TAG_SIZE_EMPTY));
+    ASSERT_SUCCESS(thsn_vector_free(&vector));
 }
 
 TEST(stores_bools) {
@@ -31,6 +32,7 @@ TEST(stores_bools) {
               thsn_tag_make(THSN_TAG_BOOL, THSN_TAG_SIZE_FALSE));
     ASSERT_EQ(vector.buffer[3],
               thsn_tag_make(THSN_TAG_BOOL, THSN_TAG_SIZE_TRUE));
+    ASSERT_SUCCESS(thsn_vector_free(&vector));
 }
 
 TEST(stores_ints) {
@@ -61,6 +63,7 @@ TEST(stores_ints) {
     ASSERT_EQ(d, INT64_MAX);
     ASSERT_EQ(vector.buffer[19],
               thsn_tag_make(THSN_TAG_INT, THSN_TAG_SIZE_ZERO));
+    ASSERT_SUCCESS(thsn_vector_free(&vector));
 }
 
 TEST(stores_strings) {
@@ -82,6 +85,7 @@ TEST(stores_strings) {
     ASSERT_EQ(memcmp(vector.buffer + 2 + short_string_slice.size,
                      &long_string_slice, sizeof(long_string_slice)),
               0);
+    ASSERT_SUCCESS(thsn_vector_free(&vector));
 }
 
 /* clang-format off */

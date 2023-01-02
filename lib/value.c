@@ -57,6 +57,7 @@ ThsnResult thsn_value_read_bool(ThsnSlice slice, ThsnValueHandle value_handle,
                 default:
                     return THSN_RESULT_INPUT_ERROR;
             }
+            break;
         default:
             return THSN_RESULT_INPUT_ERROR;
     }

@@ -167,7 +167,7 @@ ThsnResult thsn_next_token(ThsnSlice* /*in/out*/ buffer_slice,
                         }
                         [[fallthrough]];
                     default:
-                        thsn_slice_advance_unsafe(buffer_slice, -1);
+                        thsn_slice_rewind_unsafe(buffer_slice, 1);
                         --token_slice->size;
                         done = true;
                         break;
