@@ -125,7 +125,7 @@ int main(int argc, char** argv) {
     ThsnSlice input_slice = {.data = json_str, .size = json_str_len};
     ThsnParsedJson* parsed_json;
 
-    if (thsn_parsed_json_allocate(1, &parsed_json) != THSN_RESULT_SUCCESS) {
+    if (thsn_parsed_json_allocate(&parsed_json, 1) != THSN_RESULT_SUCCESS) {
         fprintf(stderr, "Can't allocate_result\n");
         return 1;
     }

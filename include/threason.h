@@ -102,8 +102,8 @@ typedef struct {
 } ThsnVisitorVTable;
 
 /*! Allocate space for parsing result */
-extern ThsnResult thsn_parsed_json_allocate(uint8_t chunks_count,
-                                            ThsnParsedJson** parsed_json);
+extern ThsnResult thsn_parsed_json_allocate(ThsnParsedJson** parsed_json,
+                                            uint8_t chunks_count);
 
 /*! Free parsing result */
 extern ThsnResult thsn_parsed_json_free(ThsnParsedJson** /*in*/ parsed_json);
@@ -147,7 +147,7 @@ extern size_t thsn_value_array_length(ThsnValueArrayTable array_table);
 /*! Return handle for the n-th element of the array. */
 extern ThsnResult thsn_value_array_element_handle(
     const ThsnParsedJson* parsed_json, ThsnValueArrayTable array_table,
-    size_t element_no, ThsnValueHandle* /*out*/ handle);
+    size_t element_no, ThsnValueHandle* /*out*/ element_handle);
 
 /*! Return the first element in the array, moving the array_table beyond it.
  */
@@ -168,18 +168,17 @@ extern size_t thsn_value_object_length(ThsnValueObjectTable object_table);
 extern ThsnResult thsn_value_object_element_handle(
     const ThsnParsedJson* parsed_json, ThsnValueObjectTable object_table,
     size_t element_no, ThsnSlice* /*out*/ key_str_slice,
-    ThsnValueHandle* /*out*/ value_handle);
+    ThsnValueHandle* /*out*/ element_handle);
 
 /*! Return the first element in the object, moving the object_table beyond it.
  */
 extern ThsnResult thsn_value_object_consume_element(
     const ThsnParsedJson* parsed_json, ThsnValueObjectTable* object_table,
-    ThsnSlice* /*out*/ key_slice, ThsnValueHandle* /*out*/ value_handle);
+    ThsnSlice* /*out*/ key_slice, ThsnValueHandle* /*out*/ element_handle);
 
 /*! Return value handle for the object's field with key equal to key_slice.
  * Sets handle to THSN_VALUE_HANDLE_NOT_FOUND if not found.*/
-extern ThsnResult thsn_value_object_index(const ThsnParsedJson* parsed_json,
-                                          ThsnValueObjectTable object_table,
-                                          ThsnSlice key_slice,
-                                          ThsnValueHandle* /*out*/ handle);
+extern ThsnResult thsn_value_object_index(
+    const ThsnParsedJson* parsed_json, ThsnValueObjectTable object_table,
+    ThsnSlice key_slice, ThsnValueHandle* /*out*/ element_handle);
 #endif

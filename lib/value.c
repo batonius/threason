@@ -5,19 +5,30 @@
 #include "tags.h"
 #include "threason.h"
 
-ThsnResult thsn_value_follow_handle(const ThsnParsedJson* parsed_json,
-                                    ThsnValueHandle* value_handle) {
+static ThsnResult thsn_value_read_tagged_value(
+    const ThsnParsedJson* parsed_json, ThsnValueHandle value_handle,
+    ThsnTag* value_tag, ThsnSlice* value_slice) {
+    BAIL_ON_NULL_INPUT(parsed_json);
+    BAIL_ON_NULL_INPUT(value_tag);
+    BAIL_ON_NULL_INPUT(value_slice);
+    BAIL_WITH_INPUT_ERROR_UNLESS(value_handle.chunk_no <
+                                 parsed_json->chunks_count);
+    BAIL_ON_ERROR(thsn_slice_at_offset(
+        parsed_json->chunks[value_handle.chunk_no], value_handle.offset,
+        sizeof(ThsnTag), value_slice));
+    BAIL_ON_ERROR(THSN_SLICE_READ_VAR(*value_slice, *value_tag));
+    return THSN_RESULT_SUCCESS;
+}
+
+static ThsnResult thsn_value_follow_handle(const ThsnParsedJson* parsed_json,
+                                           ThsnValueHandle* value_handle) {
     BAIL_ON_NULL_INPUT(parsed_json);
     BAIL_ON_NULL_INPUT(value_handle);
+    ThsnTag value_tag;
+    ThsnSlice value_slice;
     while (true) {
-        BAIL_WITH_INPUT_ERROR_UNLESS(value_handle->chunk_no <
-                                     parsed_json->chunks_count);
-        ThsnSlice value_slice;
-        BAIL_ON_ERROR(thsn_slice_at_offset(
-            parsed_json->chunks[value_handle->chunk_no], value_handle->offset,
-            sizeof(ThsnTag), &value_slice));
-        ThsnTag value_tag;
-        BAIL_ON_ERROR(THSN_SLICE_READ_VAR(value_slice, value_tag));
+        BAIL_ON_ERROR(thsn_value_read_tagged_value(parsed_json, *value_handle,
+                                                   &value_tag, &value_slice));
         if (thsn_tag_type(value_tag) == THSN_TAG_VALUE_HANDLE) {
             BAIL_ON_ERROR(THSN_SLICE_READ_VAR(value_slice, *value_handle));
         } else {
@@ -30,15 +41,12 @@ ThsnResult thsn_value_follow_handle(const ThsnParsedJson* parsed_json,
 ThsnResult thsn_value_type(const ThsnParsedJson* parsed_json,
                            ThsnValueHandle value_handle,
                            ThsnValueType* value_type) {
+    BAIL_ON_NULL_INPUT(parsed_json);
     BAIL_ON_NULL_INPUT(value_type);
-    BAIL_WITH_INPUT_ERROR_UNLESS(value_handle.chunk_no <
-                                 parsed_json->chunks_count);
-    ThsnSlice value_slice;
-    BAIL_ON_ERROR(thsn_slice_at_offset(
-        parsed_json->chunks[value_handle.chunk_no], value_handle.offset,
-        sizeof(ThsnTag), &value_slice));
     ThsnTag value_tag;
-    BAIL_ON_ERROR(THSN_SLICE_READ_VAR(value_slice, value_tag));
+    ThsnSlice value_slice;
+    BAIL_ON_ERROR(thsn_value_read_tagged_value(parsed_json, value_handle,
+                                               &value_tag, &value_slice));
     switch (thsn_tag_type(value_tag)) {
         case THSN_TAG_NULL:
             *value_type = THSN_VALUE_NULL;
@@ -68,15 +76,12 @@ ThsnResult thsn_value_type(const ThsnParsedJson* parsed_json,
 
 ThsnResult thsn_value_read_bool(const ThsnParsedJson* parsed_json,
                                 ThsnValueHandle value_handle, bool* value) {
+    BAIL_ON_NULL_INPUT(parsed_json);
     BAIL_ON_NULL_INPUT(value);
-    BAIL_WITH_INPUT_ERROR_UNLESS(value_handle.chunk_no <
-                                 parsed_json->chunks_count);
-    ThsnSlice value_slice;
-    BAIL_ON_ERROR(thsn_slice_at_offset(
-        parsed_json->chunks[value_handle.chunk_no], value_handle.offset,
-        sizeof(ThsnTag), &value_slice));
     ThsnTag value_tag;
-    BAIL_ON_ERROR(THSN_SLICE_READ_VAR(value_slice, value_tag));
+    ThsnSlice value_slice;
+    BAIL_ON_ERROR(thsn_value_read_tagged_value(parsed_json, value_handle,
+                                               &value_tag, &value_slice));
     switch (thsn_tag_type(value_tag)) {
         case THSN_TAG_BOOL:
             switch (thsn_tag_size(value_tag)) {
@@ -98,15 +103,12 @@ ThsnResult thsn_value_read_bool(const ThsnParsedJson* parsed_json,
 
 ThsnResult thsn_value_read_number(const ThsnParsedJson* parsed_json,
                                   ThsnValueHandle value_handle, double* value) {
+    BAIL_ON_NULL_INPUT(parsed_json);
     BAIL_ON_NULL_INPUT(value);
-    BAIL_WITH_INPUT_ERROR_UNLESS(value_handle.chunk_no <
-                                 parsed_json->chunks_count);
-    ThsnSlice value_slice;
-    BAIL_ON_ERROR(thsn_slice_at_offset(
-        parsed_json->chunks[value_handle.chunk_no], value_handle.offset,
-        sizeof(ThsnTag), &value_slice));
     ThsnTag value_tag;
-    BAIL_ON_ERROR(THSN_SLICE_READ_VAR(value_slice, value_tag));
+    ThsnSlice value_slice;
+    BAIL_ON_ERROR(thsn_value_read_tagged_value(parsed_json, value_handle,
+                                               &value_tag, &value_slice));
     switch (thsn_tag_type(value_tag)) {
         case THSN_TAG_INT: {
             switch (thsn_tag_size(value_tag)) {
@@ -175,6 +177,8 @@ static ThsnResult thsn_value_read_string_ex(const ThsnParsedJson* parsed_json,
 ThsnResult thsn_value_read_string(const ThsnParsedJson* parsed_json,
                                   ThsnValueHandle value_handle,
                                   ThsnSlice* string_slice) {
+    BAIL_ON_NULL_INPUT(parsed_json);
+    BAIL_ON_NULL_INPUT(string_slice);
     return thsn_value_read_string_ex(parsed_json, value_handle, string_slice,
                                      NULL);
 }
@@ -186,12 +190,10 @@ static ThsnResult thsn_value_read_composite(
     BAIL_ON_NULL_INPUT(composite_table);
     BAIL_WITH_INPUT_ERROR_UNLESS(value_handle.chunk_no <
                                  parsed_json->chunks_count);
-    ThsnSlice value_slice;
-    BAIL_ON_ERROR(thsn_slice_at_offset(
-        parsed_json->chunks[value_handle.chunk_no], value_handle.offset,
-        sizeof(ThsnTag), &value_slice));
     ThsnTag value_tag;
-    BAIL_ON_ERROR(THSN_SLICE_READ_VAR(value_slice, value_tag));
+    ThsnSlice value_slice;
+    BAIL_ON_ERROR(thsn_value_read_tagged_value(parsed_json, value_handle,
+                                               &value_tag, &value_slice));
     if (thsn_tag_type(value_tag) != expected_type) {
         return THSN_RESULT_INPUT_ERROR;
     }
@@ -222,6 +224,8 @@ static ThsnResult thsn_value_read_composite(
 ThsnResult thsn_value_read_array(const ThsnParsedJson* parsed_json,
                                  ThsnValueHandle value_handle,
                                  ThsnValueArrayTable* array_table) {
+    BAIL_ON_NULL_INPUT(parsed_json);
+    BAIL_ON_NULL_INPUT(array_table);
     return thsn_value_read_composite(parsed_json, value_handle, THSN_TAG_ARRAY,
                                      array_table);
 }
@@ -233,24 +237,25 @@ size_t thsn_value_array_length(ThsnValueArrayTable array_table) {
 ThsnResult thsn_value_array_element_handle(const ThsnParsedJson* parsed_json,
                                            ThsnValueArrayTable array_table,
                                            size_t element_no,
-                                           ThsnValueHandle* handle) {
-    BAIL_ON_NULL_INPUT(handle);
+                                           ThsnValueHandle* element_handle) {
     BAIL_ON_NULL_INPUT(parsed_json);
+    BAIL_ON_NULL_INPUT(element_handle);
     ThsnSlice element_handle_slice;
     BAIL_ON_ERROR(thsn_slice_at_offset(array_table.elements_table,
                                        element_no * sizeof(size_t),
                                        sizeof(size_t), &element_handle_slice));
     size_t element_offset;
     BAIL_ON_ERROR(THSN_SLICE_READ_VAR(element_handle_slice, element_offset));
-    *handle = (ThsnValueHandle){.chunk_no = array_table.chunk_no,
-                                .offset = element_offset};
-    BAIL_ON_ERROR(thsn_value_follow_handle(parsed_json, handle));
+    *element_handle = (ThsnValueHandle){.chunk_no = array_table.chunk_no,
+                                        .offset = element_offset};
+    BAIL_ON_ERROR(thsn_value_follow_handle(parsed_json, element_handle));
     return THSN_RESULT_SUCCESS;
 }
 
 ThsnResult thsn_value_array_consume_element(const ThsnParsedJson* parsed_json,
                                             ThsnValueArrayTable* array_table,
                                             ThsnValueHandle* element_handle) {
+    BAIL_ON_NULL_INPUT(parsed_json);
     BAIL_ON_NULL_INPUT(array_table);
     BAIL_ON_NULL_INPUT(element_handle);
     size_t element_offset;
@@ -265,6 +270,7 @@ ThsnResult thsn_value_array_consume_element(const ThsnParsedJson* parsed_json,
 ThsnResult thsn_value_read_object(const ThsnParsedJson* parsed_json,
                                   ThsnValueHandle value_handle,
                                   ThsnValueObjectTable* object_table) {
+    BAIL_ON_NULL_INPUT(parsed_json);
     BAIL_ON_NULL_INPUT(object_table);
     return thsn_value_read_composite(parsed_json, value_handle, THSN_TAG_OBJECT,
                                      object_table);
@@ -277,15 +283,16 @@ size_t thsn_value_object_length(ThsnValueObjectTable object_table) {
 static ThsnResult thsn_value_object_read_kv(const ThsnParsedJson* parsed_json,
                                             ThsnValueHandle kv_handle,
                                             ThsnSlice* key_slice,
-                                            ThsnValueHandle* value_handle) {
+                                            ThsnValueHandle* element_handle) {
+    BAIL_ON_NULL_INPUT(parsed_json);
     BAIL_ON_NULL_INPUT(key_slice);
-    BAIL_ON_NULL_INPUT(value_handle);
+    BAIL_ON_NULL_INPUT(element_handle);
     size_t key_size;
     BAIL_ON_ERROR(thsn_value_read_string_ex(parsed_json, kv_handle, key_slice,
                                             &key_size));
-    *value_handle = kv_handle;
-    value_handle->offset += key_size;
-    BAIL_ON_ERROR(thsn_value_follow_handle(parsed_json, value_handle));
+    *element_handle = kv_handle;
+    element_handle->offset += key_size;
+    BAIL_ON_ERROR(thsn_value_follow_handle(parsed_json, element_handle));
     return THSN_RESULT_SUCCESS;
 }
 
@@ -293,20 +300,22 @@ ThsnResult thsn_value_object_element_handle(const ThsnParsedJson* parsed_json,
                                             ThsnValueObjectTable object_table,
                                             size_t element_no,
                                             ThsnSlice* key_slice,
-                                            ThsnValueHandle* value_handle) {
+                                            ThsnValueHandle* element_handle) {
+    BAIL_ON_NULL_INPUT(parsed_json);
     BAIL_ON_NULL_INPUT(key_slice);
-    BAIL_ON_NULL_INPUT(value_handle);
+    BAIL_ON_NULL_INPUT(element_handle);
     ThsnValueHandle kv_handle;
     BAIL_ON_ERROR(thsn_value_array_element_handle(parsed_json, object_table,
                                                   element_no, &kv_handle));
     return thsn_value_object_read_kv(parsed_json, kv_handle, key_slice,
-                                     value_handle);
+                                     element_handle);
 }
 
 ThsnResult thsn_value_object_consume_element(const ThsnParsedJson* parsed_json,
                                              ThsnValueObjectTable* object_table,
                                              ThsnSlice* key_slice,
                                              ThsnValueHandle* value_handle) {
+    BAIL_ON_NULL_INPUT(parsed_json);
     BAIL_ON_NULL_INPUT(object_table);
     BAIL_ON_NULL_INPUT(key_slice);
     BAIL_ON_NULL_INPUT(value_handle);
@@ -320,10 +329,12 @@ ThsnResult thsn_value_object_consume_element(const ThsnParsedJson* parsed_json,
 ThsnResult thsn_value_object_index(const ThsnParsedJson* parsed_json,
                                    ThsnValueObjectTable object_table,
                                    ThsnSlice key_slice,
-                                   ThsnValueHandle* handle) {
+                                   ThsnValueHandle* element_handle) {
+    BAIL_ON_NULL_INPUT(parsed_json);
+    BAIL_ON_NULL_INPUT(element_handle);
     ThsnSlice element_key_slice;
     ThsnValueHandle element_value_handle;
-    *handle = THSN_VALUE_HANDLE_NOT_FOUND;
+    *element_handle = THSN_VALUE_HANDLE_NOT_FOUND;
     while (!thsn_slice_is_empty(object_table.elements_table)) {
         const size_t elements_count =
             object_table.elements_table.size / sizeof(size_t);
@@ -341,7 +352,7 @@ ThsnResult thsn_value_object_index(const ThsnParsedJson* parsed_json,
         }
 
         if (cmp_result == 0) {
-            *handle = element_value_handle;
+            *element_handle = element_value_handle;
             return THSN_RESULT_SUCCESS;
         } else if (cmp_result < 0) {
             BAIL_ON_ERROR(thsn_slice_truncate(&object_table.elements_table,

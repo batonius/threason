@@ -373,8 +373,8 @@ ThsnResult thsn_parser_parse_next_token(ThsnParserContext* parser_context,
     return THSN_RESULT_SUCCESS;
 }
 
-ThsnResult thsn_parsed_json_allocate(uint8_t chunks_count,
-                                     ThsnParsedJson** parsed_json) {
+ThsnResult thsn_parsed_json_allocate(ThsnParsedJson** parsed_json,
+                                     uint8_t chunks_count) {
     *parsed_json =
         malloc(sizeof(ThsnParsedJson) + sizeof(ThsnSlice) * chunks_count);
     if (*parsed_json == NULL) {

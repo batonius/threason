@@ -10,7 +10,7 @@ TEST(indexes_object_by_key) {
     ThsnSlice object_str_slice;
     ASSERT_SUCCESS(thsn_slice_from_c_str(object_str, &object_str_slice));
     ThsnParsedJson* parsed_json;
-    ASSERT_SUCCESS(thsn_parsed_json_allocate(1, &parsed_json));
+    ASSERT_SUCCESS(thsn_parsed_json_allocate(&parsed_json, 1));
     ASSERT_SUCCESS(thsn_parse_buffer(&object_str_slice, parsed_json));
     ThsnValueType value_type = THSN_VALUE_NULL;
     ASSERT_SUCCESS(
