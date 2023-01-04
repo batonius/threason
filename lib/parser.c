@@ -1,26 +1,11 @@
 #include <stdlib.h>
 
+#include "parser.h"
 #include "result.h"
 #include "slice.h"
 #include "tags.h"
 #include "tokenizer.h"
 #include "vector.h"
-
-typedef enum {
-    THSN_PARSER_STATE_VALUE,
-    THSN_PARSER_STATE_FINISH,
-    THSN_PARSER_STATE_FIRST_ARRAY_ELEMENT,
-    THSN_PARSER_STATE_NEXT_ARRAY_ELEMENT,
-    THSN_PARSER_STATE_FIRST_KV,
-    THSN_PARSER_STATE_KV_COLON,
-    THSN_PARSER_STATE_KV_END,
-    THSN_PARSER_STATE_NEXT_KV,
-} ThsnParserState;
-
-typedef struct {
-    ThsnParserState state;
-    ThsnVector stack;
-} ThsnParserContext;
 
 static long long thsn_parser_atoll_checked(ThsnSlice slice) {
     long long result = 0;
@@ -339,9 +324,10 @@ ThsnResult thsn_parser_context_free(ThsnParserContext* parser_context) {
     return THSN_RESULT_SUCCESS;
 }
 
-static ThsnResult thsn_parser_parse_next_token(
-    ThsnParserContext* parser_context, ThsnToken token, ThsnSlice token_slice,
-    ThsnVector* result_vector, bool* finished) {
+ThsnResult thsn_parser_parse_next_token(ThsnParserContext* parser_context,
+                                        ThsnToken token, ThsnSlice token_slice,
+                                        ThsnVector* result_vector,
+                                        bool* finished) {
     BAIL_ON_NULL_INPUT(parser_context);
     *finished = false;
     switch (parser_context->state) {
@@ -387,10 +373,28 @@ static ThsnResult thsn_parser_parse_next_token(
     return THSN_RESULT_SUCCESS;
 }
 
+ThsnResult thsn_parsed_json_allocate(uint8_t chunks_count,
+                                     ThsnParsedJson** parsed_json) {
+    *parsed_json =
+        malloc(sizeof(ThsnParsedJson) + sizeof(ThsnSlice) * chunks_count);
+    if (*parsed_json == NULL) {
+        return THSN_RESULT_OUT_OF_MEMORY_ERROR;
+    }
+    (*parsed_json)->chunks_count = chunks_count;
+    return THSN_RESULT_SUCCESS;
+}
+
+ThsnResult thsn_parsed_json_free(ThsnParsedJson** /*in*/ parsed_json) {
+    free(*parsed_json);
+    *parsed_json = NULL;
+    return THSN_RESULT_SUCCESS;
+}
+
 ThsnResult thsn_parse_buffer(ThsnSlice* /*in/out*/ buffer_slice,
-                             ThsnSlice* /*out*/ parsed_json) {
+                             ThsnParsedJson* parsed_json) {
     BAIL_ON_NULL_INPUT(buffer_slice);
     BAIL_ON_NULL_INPUT(parsed_json);
+    BAIL_WITH_INPUT_ERROR_UNLESS(parsed_json->chunks_count == 1);
     ThsnToken token;
     ThsnSlice token_slice;
     ThsnVector result_vector = thsn_vector_make_empty();
@@ -405,7 +409,7 @@ ThsnResult thsn_parse_buffer(ThsnSlice* /*in/out*/ buffer_slice,
                                          &result_vector, &finished),
             result_context_cleanup);
     }
-    *parsed_json = thsn_vector_as_slice(result_vector);
+    parsed_json->chunks[0] = thsn_vector_as_slice(result_vector);
     thsn_parser_context_free(&parser_context);
     return THSN_RESULT_SUCCESS;
 

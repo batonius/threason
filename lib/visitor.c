@@ -1,14 +1,13 @@
 #include "slice.h"
 #include "vector.h"
-#include "visitor.h"
 
 typedef enum {
     THSN_VISIT_TAG_ARRAY,
     THSN_VISIT_TAG_OBJECT_KV,
 } ThsnVisitTag;
 
-ThsnResult thsn_visit(ThsnSlice parse_result, const ThsnVisitorVTable* vtable,
-                      void* user_data) {
+ThsnResult thsn_visit(const ThsnParsedJson* parsed_json,
+                      const ThsnVisitorVTable* vtable, void* user_data) {
 #define PROCESS_VISITOR_RESULT(result)              \
     do {                                            \
         switch ((result)) {                         \
@@ -40,10 +39,6 @@ ThsnResult thsn_visit(ThsnSlice parse_result, const ThsnVisitorVTable* vtable,
         }                                                               \
     } while (0)
 
-    if (thsn_slice_is_empty(parse_result)) {
-        return THSN_RESULT_SUCCESS;
-    }
-
     ThsnVisitorContext context = {
         .key = thsn_slice_make_empty(),
         .in_array = false,
@@ -60,7 +55,7 @@ ThsnResult thsn_visit(ThsnSlice parse_result, const ThsnVisitorVTable* vtable,
     do {
         ThsnValueType value_type = THSN_VALUE_NULL;
         GOTO_ON_ERROR(
-            thsn_value_type(parse_result, current_value_handle, &value_type),
+            thsn_value_type(parsed_json, current_value_handle, &value_type),
             error_cleanup);
         switch (value_type) {
             case THSN_VALUE_NULL:
@@ -69,7 +64,7 @@ ThsnResult thsn_visit(ThsnSlice parse_result, const ThsnVisitorVTable* vtable,
             case THSN_VALUE_BOOL: {
                 bool value;
                 GOTO_ON_ERROR(thsn_value_read_bool(
-                                  parse_result, current_value_handle, &value),
+                                  parsed_json, current_value_handle, &value),
                               error_cleanup);
                 CALL_VISITOR3(vtable->visit_bool, &context, user_data, value);
                 break;
@@ -77,7 +72,7 @@ ThsnResult thsn_visit(ThsnSlice parse_result, const ThsnVisitorVTable* vtable,
             case THSN_VALUE_NUMBER: {
                 double value;
                 GOTO_ON_ERROR(thsn_value_read_number(
-                                  parse_result, current_value_handle, &value),
+                                  parsed_json, current_value_handle, &value),
                               error_cleanup);
                 CALL_VISITOR3(vtable->visit_number, &context, user_data, value);
                 break;
@@ -85,7 +80,7 @@ ThsnResult thsn_visit(ThsnSlice parse_result, const ThsnVisitorVTable* vtable,
             case THSN_VALUE_STRING: {
                 ThsnSlice string_slice;
                 GOTO_ON_ERROR(
-                    thsn_value_read_string(parse_result, current_value_handle,
+                    thsn_value_read_string(parsed_json, current_value_handle,
                                            &string_slice),
                     error_cleanup);
                 CALL_VISITOR3(vtable->visit_string, &context, user_data,
@@ -99,7 +94,7 @@ ThsnResult thsn_visit(ThsnSlice parse_result, const ThsnVisitorVTable* vtable,
                 }
                 ThsnValueArrayTable array_table;
                 GOTO_ON_ERROR(
-                    thsn_value_read_array(parse_result, current_value_handle,
+                    thsn_value_read_array(parsed_json, current_value_handle,
                                           &array_table),
                     error_cleanup);
                 GOTO_ON_ERROR(THSN_VECTOR_PUSH_3_VARS(stack, array_table,
@@ -114,7 +109,7 @@ ThsnResult thsn_visit(ThsnSlice parse_result, const ThsnVisitorVTable* vtable,
                 }
                 ThsnValueObjectTable object_table;
                 GOTO_ON_ERROR(
-                    thsn_value_read_object(parse_result, current_value_handle,
+                    thsn_value_read_object(parsed_json, current_value_handle,
                                            &object_table),
                     error_cleanup);
                 GOTO_ON_ERROR(
@@ -145,9 +140,10 @@ ThsnResult thsn_visit(ThsnSlice parse_result, const ThsnVisitorVTable* vtable,
                                       user_data);
                         break;
                     }
-                    GOTO_ON_ERROR(thsn_value_array_consume_element(
-                                      &array_table, &current_value_handle),
-                                  error_cleanup);
+                    GOTO_ON_ERROR(
+                        thsn_value_array_consume_element(
+                            parsed_json, &array_table, &current_value_handle),
+                        error_cleanup);
                     GOTO_ON_ERROR(
                         THSN_VECTOR_PUSH_3_VARS(stack, array_table, context,
                                                 VISIT_TAG_ARRAY),
@@ -171,7 +167,7 @@ ThsnResult thsn_visit(ThsnSlice parse_result, const ThsnVisitorVTable* vtable,
                     }
                     ThsnSlice key_slice;
                     GOTO_ON_ERROR(thsn_value_object_consume_element(
-                                      parse_result, &object_table, &key_slice,
+                                      parsed_json, &object_table, &key_slice,
                                       &current_value_handle),
                                   error_cleanup);
                     GOTO_ON_ERROR(

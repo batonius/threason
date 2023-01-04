@@ -32,4 +32,11 @@
         }                                 \
     } while (0)
 
+#define BAIL_WITH_INPUT_ERROR_UNLESS(condition) \
+    do {                                        \
+        if (!(condition)) {                     \
+            return THSN_RESULT_INPUT_ERROR;     \
+        }                                       \
+    } while (0)
+
 #endif

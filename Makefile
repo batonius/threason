@@ -41,7 +41,7 @@ endif
 
 .SUFFIXES:
 
-.PHONY: all clean tests
+.PHONY: all clean tests run-tests
 
 all: $(LIB-AR) tests bins
 
@@ -70,3 +70,6 @@ $(DOCS-DIR):
 clean:
 	rm -rf $(BUILD-DIR)
 	rm -rf $(DOCS-DIR)
+
+run-tests: clean tests
+	$(BUILD-DIR)/tests

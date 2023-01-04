@@ -5,6 +5,7 @@
 
 #include "result.h"
 #include "slice.h"
+#include "threason.h"
 #include "vector.h"
 
 typedef enum {
@@ -16,6 +17,7 @@ typedef enum {
     THSN_TAG_DOUBLE,
     THSN_TAG_ARRAY,
     THSN_TAG_OBJECT,
+    THSN_TAG_VALUE_HANDLE,
 } ThsnTagType;
 
 typedef unsigned char ThsnTagSize;
@@ -103,6 +105,13 @@ inline ThsnResult thsn_vector_store_int(ThsnVector* /*in/out*/ vector,
     return thsn_vector_store_tagged_value(
         vector, thsn_tag_make(THSN_TAG_INT, sizeof(long long)),
         THSN_SLICE_FROM_VAR(value));
+}
+
+inline ThsnResult thsn_vector_store_value_handle(ThsnVector* /*in/out*/ vector,
+                                                 ThsnValueHandle value_handle) {
+    return thsn_vector_store_tagged_value(
+        vector, thsn_tag_make(THSN_TAG_VALUE_HANDLE, THSN_TAG_SIZE_ZERO),
+        THSN_SLICE_FROM_VAR(value_handle));
 }
 
 inline ThsnResult thsn_vector_store_string(ThsnVector* /*in/out*/ vector,
