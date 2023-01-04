@@ -1,6 +1,6 @@
 # threason
-An experimental pure C2x JSON parser library designed around single contignious buffer, with fewer allocations and better cache-locality. 
-Parsing and querying/walking only, no creation/modification.
+An experimental pure C2x JSON parser library designed around building a single contignious buffer, with fewer allocations and better cache-locality. 
+Buffer parsing and querying/walking only, no streaming and no creation/modification.
 
 ## The Idea
 My personal goal was to try my hand at designing and implementing a high-quality limited-size project in pure C, thus `-Wall -Wextra -Werror -pedantic -std=c2x` and no libraries used other than `libc`.

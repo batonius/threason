@@ -20,9 +20,9 @@ typedef enum {
 typedef struct {
     ThsnParserState state;
     ThsnVector stack;
-} ThsnParserStatus;
+} ThsnParserContext;
 
-static long long thsn_atoll_checked(ThsnSlice slice) {
+static long long thsn_parser_atoll_checked(ThsnSlice slice) {
     long long result = 0;
     char c;
     if (thsn_slice_try_consume_char(&slice, &c)) {
@@ -47,7 +47,7 @@ static long long thsn_atoll_checked(ThsnSlice slice) {
     return result;
 }
 
-static ThsnResult thsn_atod_checked(ThsnSlice slice, double* result) {
+static ThsnResult thsn_parser_atod_checked(ThsnSlice slice, double* result) {
     BAIL_ON_NULL_INPUT(result);
     const size_t MAX_DOUBLE_LEN = 128;
     if (slice.size > MAX_DOUBLE_LEN) {
@@ -114,7 +114,7 @@ static ThsnResult thsn_parser_sort_elements_table(ThsnMutSlice elements_table,
 
 static ThsnResult thsn_parser_parse_value(ThsnToken token,
                                           ThsnSlice token_slice,
-                                          ThsnParserStatus* parser_status,
+                                          ThsnParserContext* parser_status,
                                           ThsnVector* result_vector) {
     parser_status->state = THSN_PARSER_STATE_FINISH;
     switch (token) {
@@ -127,11 +127,11 @@ static ThsnResult thsn_parser_parse_value(ThsnToken token,
         case THSN_TOKEN_FALSE:
             return thsn_vector_store_bool(result_vector, false);
         case THSN_TOKEN_INT:
-            return thsn_vector_store_int(result_vector,
-                                         thsn_atoll_checked(token_slice));
+            return thsn_vector_store_int(
+                result_vector, thsn_parser_atoll_checked(token_slice));
         case THSN_TOKEN_FLOAT: {
             double value;
-            BAIL_ON_ERROR(thsn_atod_checked(token_slice, &value));
+            BAIL_ON_ERROR(thsn_parser_atod_checked(token_slice, &value));
             return thsn_vector_store_double(result_vector, value);
         }
         case THSN_TOKEN_STRING:
@@ -148,7 +148,7 @@ static ThsnResult thsn_parser_parse_value(ThsnToken token,
 }
 
 static ThsnResult thsn_parser_store_composite_header(
-    ThsnParserStatus* parser_status, ThsnVector* result_vector, ThsnTag tag) {
+    ThsnParserContext* parser_status, ThsnVector* result_vector, ThsnTag tag) {
     const size_t composite_header_size = sizeof(ThsnTag) + 2 * sizeof(size_t);
     size_t composite_header_offset = thsn_vector_current_offset(*result_vector);
     ThsnMutSlice composite_header_mut_slice;
@@ -166,7 +166,7 @@ static ThsnResult thsn_parser_store_composite_header(
 }
 
 static ThsnResult thsn_parser_add_composite_element(
-    ThsnParserStatus* parser_status, ThsnVector* result_vector) {
+    ThsnParserContext* parser_status, ThsnVector* result_vector) {
     size_t array_elements_count;
     BAIL_ON_ERROR(
         THSN_VECTOR_POP_VAR(parser_status->stack, array_elements_count));
@@ -178,7 +178,7 @@ static ThsnResult thsn_parser_add_composite_element(
 }
 
 static ThsnResult thsn_parser_store_composite_elements_table(
-    ThsnParserStatus* parser_status, ThsnVector* result_vector,
+    ThsnParserContext* parser_status, ThsnVector* result_vector,
     bool sort_as_kv) {
     size_t composite_elements_count;
     BAIL_ON_ERROR(
@@ -217,7 +217,7 @@ static ThsnResult thsn_parser_store_composite_elements_table(
 }
 
 static ThsnResult thsn_parser_parse_first_array_element(
-    ThsnToken token, ThsnSlice token_slice, ThsnParserStatus* parser_status,
+    ThsnToken token, ThsnSlice token_slice, ThsnParserContext* parser_status,
     ThsnVector* result_vector) {
     if (token == THSN_TOKEN_CLOSED_BRACKET) {
         parser_status->state = THSN_PARSER_STATE_FINISH;
@@ -235,7 +235,7 @@ static ThsnResult thsn_parser_parse_first_array_element(
 }
 
 static ThsnResult thsn_parser_parse_next_array_element(
-    ThsnToken token, ThsnSlice token_slice, ThsnParserStatus* parser_status,
+    ThsnToken token, ThsnSlice token_slice, ThsnParserContext* parser_status,
     ThsnVector* result_vector) {
     // From the top of the stack: number of element, (elements offsets)+,
     // header offset
@@ -259,7 +259,7 @@ static ThsnResult thsn_parser_parse_next_array_element(
 
 static ThsnResult thsn_parser_parse_next_kv(ThsnToken token,
                                             ThsnSlice token_slice,
-                                            ThsnParserStatus* parser_status,
+                                            ThsnParserContext* parser_status,
                                             ThsnVector* result_vector) {
     if (token != THSN_TOKEN_STRING) {
         return THSN_RESULT_INPUT_ERROR;
@@ -273,7 +273,7 @@ static ThsnResult thsn_parser_parse_next_kv(ThsnToken token,
 
 static ThsnResult thsn_parser_parse_first_kv(ThsnToken token,
                                              ThsnSlice token_slice,
-                                             ThsnParserStatus* parser_status,
+                                             ThsnParserContext* parser_status,
                                              ThsnVector* result_vector) {
     if (token == THSN_TOKEN_CLOSED_BRACE) {
         parser_status->state = THSN_PARSER_STATE_FINISH;
@@ -294,7 +294,7 @@ static ThsnResult thsn_parser_parse_first_kv(ThsnToken token,
 
 static ThsnResult thsn_parser_parse_kv_colon(ThsnToken token,
                                              ThsnSlice token_slice,
-                                             ThsnParserStatus* parser_status,
+                                             ThsnParserContext* parser_status,
                                              ThsnVector* result_vector) {
     (void)token_slice;
     (void)result_vector;
@@ -309,7 +309,7 @@ static ThsnResult thsn_parser_parse_kv_colon(ThsnToken token,
 
 static ThsnResult thsn_parser_parse_kv_end(ThsnToken token,
                                            ThsnSlice token_slice,
-                                           ThsnParserStatus* parser_status,
+                                           ThsnParserContext* parser_status,
                                            ThsnVector* result_vector) {
     (void)token_slice;
     (void)result_vector;
@@ -326,90 +326,94 @@ static ThsnResult thsn_parser_parse_kv_end(ThsnToken token,
     return THSN_RESULT_SUCCESS;
 }
 
-static ThsnResult thsn_parse_value(ThsnSlice* /*in/out*/ buffer_slice,
-                                   ThsnVector* /*in/out*/ result_vector) {
-    BAIL_ON_NULL_INPUT(buffer_slice);
-    BAIL_ON_NULL_INPUT(result_vector);
-    ThsnSlice token_slice;
-    ThsnToken token;
-    ThsnParserStatus parser_status = {.state = THSN_PARSER_STATE_VALUE};
-    BAIL_ON_ERROR(thsn_vector_allocate(&parser_status.stack, 1024));
-
-    while (true) {
-        GOTO_ON_ERROR(thsn_next_token(buffer_slice, &token_slice, &token),
-                      error_cleanup);
-        switch (parser_status.state) {
-            case THSN_PARSER_STATE_VALUE:
-                GOTO_ON_ERROR(
-                    thsn_parser_parse_value(token, token_slice, &parser_status,
-                                            result_vector),
-                    error_cleanup);
-                break;
-            case THSN_PARSER_STATE_FIRST_ARRAY_ELEMENT:
-                GOTO_ON_ERROR(
-                    thsn_parser_parse_first_array_element(
-                        token, token_slice, &parser_status, result_vector),
-                    error_cleanup);
-                break;
-            case THSN_PARSER_STATE_NEXT_ARRAY_ELEMENT:
-                GOTO_ON_ERROR(
-                    thsn_parser_parse_next_array_element(
-                        token, token_slice, &parser_status, result_vector),
-                    error_cleanup);
-                break;
-            case THSN_PARSER_STATE_FIRST_KV:
-                GOTO_ON_ERROR(
-                    thsn_parser_parse_first_kv(token, token_slice,
-                                               &parser_status, result_vector),
-                    error_cleanup);
-                break;
-            case THSN_PARSER_STATE_KV_COLON:
-                GOTO_ON_ERROR(
-                    thsn_parser_parse_kv_colon(token, token_slice,
-                                               &parser_status, result_vector),
-                    error_cleanup);
-                break;
-            case THSN_PARSER_STATE_KV_END:
-                GOTO_ON_ERROR(
-                    thsn_parser_parse_kv_end(token, token_slice, &parser_status,
-                                             result_vector),
-                    error_cleanup);
-                break;
-            case THSN_PARSER_STATE_NEXT_KV:
-                GOTO_ON_ERROR(
-                    thsn_parser_parse_next_kv(token, token_slice,
-                                              &parser_status, result_vector),
-                    error_cleanup);
-                break;
-                break;
-            case THSN_PARSER_STATE_FINISH:
-                goto error_cleanup;
-        }
-        if (parser_status.state == THSN_PARSER_STATE_FINISH) {
-            if (thsn_vector_is_empty(parser_status.stack)) {
-                break;
-            }
-            GOTO_ON_ERROR(
-                THSN_VECTOR_POP_VAR(parser_status.stack, parser_status.state),
-                error_cleanup);
-        }
-    }
-
-    thsn_vector_free(&parser_status.stack);
+ThsnResult thsn_parser_context_init(ThsnParserContext* parser_context) {
+    BAIL_ON_NULL_INPUT(parser_context);
+    parser_context->state = THSN_PARSER_STATE_VALUE;
+    BAIL_ON_ERROR(thsn_vector_allocate(&parser_context->stack, 1024));
     return THSN_RESULT_SUCCESS;
-error_cleanup:
-    thsn_vector_free(&parser_status.stack);
-    return THSN_RESULT_INPUT_ERROR;
 }
 
-ThsnResult thsn_parse_json(ThsnSlice* /*in/out*/ buffer_slice,
-                           ThsnSlice* /*out*/ parsed_json) {
+ThsnResult thsn_parser_context_free(ThsnParserContext* parser_context) {
+    BAIL_ON_NULL_INPUT(parser_context);
+    thsn_vector_free(&parser_context->stack);
+    return THSN_RESULT_SUCCESS;
+}
+
+static ThsnResult thsn_parser_parse_next_token(
+    ThsnParserContext* parser_context, ThsnToken token, ThsnSlice token_slice,
+    ThsnVector* result_vector, bool* finished) {
+    BAIL_ON_NULL_INPUT(parser_context);
+    *finished = false;
+    switch (parser_context->state) {
+        case THSN_PARSER_STATE_VALUE:
+            BAIL_ON_ERROR(thsn_parser_parse_value(
+                token, token_slice, parser_context, result_vector));
+            break;
+        case THSN_PARSER_STATE_FIRST_ARRAY_ELEMENT:
+            BAIL_ON_ERROR(thsn_parser_parse_first_array_element(
+                token, token_slice, parser_context, result_vector));
+            break;
+        case THSN_PARSER_STATE_NEXT_ARRAY_ELEMENT:
+            BAIL_ON_ERROR(thsn_parser_parse_next_array_element(
+                token, token_slice, parser_context, result_vector));
+            break;
+        case THSN_PARSER_STATE_FIRST_KV:
+            BAIL_ON_ERROR(thsn_parser_parse_first_kv(
+                token, token_slice, parser_context, result_vector));
+            break;
+        case THSN_PARSER_STATE_KV_COLON:
+            BAIL_ON_ERROR(thsn_parser_parse_kv_colon(
+                token, token_slice, parser_context, result_vector));
+            break;
+        case THSN_PARSER_STATE_KV_END:
+            BAIL_ON_ERROR(thsn_parser_parse_kv_end(
+                token, token_slice, parser_context, result_vector));
+            break;
+        case THSN_PARSER_STATE_NEXT_KV:
+            BAIL_ON_ERROR(thsn_parser_parse_next_kv(
+                token, token_slice, parser_context, result_vector));
+            break;
+        case THSN_PARSER_STATE_FINISH:
+            return THSN_RESULT_INPUT_ERROR;
+    }
+    if (parser_context->state == THSN_PARSER_STATE_FINISH) {
+        if (thsn_vector_is_empty(parser_context->stack)) {
+            *finished = true;
+        } else {
+            BAIL_ON_ERROR(THSN_VECTOR_POP_VAR(parser_context->stack,
+                                              parser_context->state));
+        }
+    }
+    return THSN_RESULT_SUCCESS;
+}
+
+ThsnResult thsn_parse_buffer(ThsnSlice* /*in/out*/ buffer_slice,
+                             ThsnSlice* /*out*/ parsed_json) {
     BAIL_ON_NULL_INPUT(buffer_slice);
     BAIL_ON_NULL_INPUT(parsed_json);
+    ThsnToken token;
+    ThsnSlice token_slice;
     ThsnVector result_vector = thsn_vector_make_empty();
-    BAIL_ON_ERROR(thsn_parse_value(buffer_slice, &result_vector));
+    ThsnParserContext parser_context;
+    GOTO_ON_ERROR(thsn_parser_context_init(&parser_context), result_cleanup);
+    bool finished = false;
+    while (!finished) {
+        GOTO_ON_ERROR(thsn_next_token(buffer_slice, &token_slice, &token),
+                      result_context_cleanup);
+        GOTO_ON_ERROR(
+            thsn_parser_parse_next_token(&parser_context, token, token_slice,
+                                         &result_vector, &finished),
+            result_context_cleanup);
+    }
     *parsed_json = thsn_vector_as_slice(result_vector);
+    thsn_parser_context_free(&parser_context);
     return THSN_RESULT_SUCCESS;
+
+result_context_cleanup:
+    thsn_parser_context_free(&parser_context);
+result_cleanup:
+    thsn_vector_free(&result_vector);
+    return THSN_RESULT_INPUT_ERROR;
 }
 
 ThsnResult thsn_free_parsed_json(ThsnSlice* /*in/out*/ parsed_json) {

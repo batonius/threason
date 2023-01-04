@@ -125,7 +125,7 @@ int main(int argc, char** argv) {
     ThsnSlice input_slice = {.data = json_str, .size = json_str_len};
     ThsnParsedJson parsed_json;
 
-    if (thsn_parse_json(&input_slice, &parsed_json) != THSN_RESULT_SUCCESS) {
+    if (thsn_parse_buffer(&input_slice, &parsed_json) != THSN_RESULT_SUCCESS) {
         fprintf(stderr, "Can't parse input string\n");
         return 1;
     }
