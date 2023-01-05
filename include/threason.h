@@ -65,10 +65,12 @@ typedef struct {
     bool last;
 } ThsnVisitorContext;
 
+typedef ThsnSlice ThsnOwningSlice;
+
 /*! */
 typedef struct {
     size_t chunks_count;
-    ThsnSlice chunks[];
+    ThsnOwningSlice chunks[];
 } ThsnParsedJson;
 
 /*! A slice with array elements, should only be used with `thsn_value_array_*`
