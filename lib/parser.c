@@ -437,3 +437,17 @@ ThsnResult thsn_parser_add_value_handle(ThsnParserContext* parser_context,
         THSN_VECTOR_POP_VAR(parser_context->stack, parser_context->state));
     return THSN_RESULT_SUCCESS;
 }
+
+ThsnResult thsn_parser_reset_state(ThsnParserContext* parser_context) {
+    BAIL_ON_NULL_INPUT(parser_context);
+    parser_context->state = THSN_PARSER_STATE_VALUE;
+    return THSN_RESULT_SUCCESS;
+}
+
+ThsnResult thsn_parser_next_value_offset(ThsnParserContext* parser_context,
+                                         size_t* next_offset) {
+    BAIL_ON_NULL_INPUT(parser_context);
+    BAIL_ON_NULL_INPUT(next_offset);
+    *next_offset = thsn_vector_current_offset(parser_context->result_vector);
+    return THSN_RESULT_SUCCESS;
+}

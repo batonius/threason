@@ -34,4 +34,9 @@ ThsnResult thsn_parser_parse_next_token(ThsnParserContext* parser_context,
 ThsnResult thsn_parser_add_value_handle(ThsnParserContext* parser_context,
                                         ThsnValueHandle value_handle);
 
+ThsnResult thsn_parser_reset_state(ThsnParserContext* parser_context);
+
+ThsnResult thsn_parser_next_value_offset(ThsnParserContext* parser_context,
+                                         size_t* next_offset);
+
 #endif
