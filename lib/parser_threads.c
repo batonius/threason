@@ -1,4 +1,5 @@
 #include "parser.h"
+#include "stdatomic.h"
 #include "threads.h"
 
 typedef struct {
@@ -7,15 +8,17 @@ typedef struct {
 } ThsnPreparsedValue;
 
 typedef struct {
-    /* mutex */
+    /* Completion flag */
+    volatile atomic_bool completed;
     /* Thread inputs */
     ThsnSlice buffer_slice;
     /* Thread outputs */
-    ThsnOwningSlice preparsed_table;
-    ThsnOwningSlice parse_result;
-    /* */
-    char padding[128];
-} ThsnThreadResut;
+    struct {
+        ThsnOwningSlice preparsed_table;
+        ThsnOwningSlice parse_result;
+        bool failed;
+    } parsing_results[2];
+} ThsnThreadContext;
 
 ThsnResult thsn_preparse_buffer(ThsnSlice buffer_slice,
                                 ThsnOwningSlice* parse_result,
@@ -65,4 +68,61 @@ error_cleanup:
     thsn_parser_context_finish(&parser_context, NULL);
     thsn_vector_free(&preparsed_vector);
     return THSN_RESULT_INPUT_ERROR;
+}
+
+static void thsn_advance_after_end_of_string(ThsnSlice* buffer_slice) {
+    while (true) {
+        const char* const next_quotes =
+            memchr(buffer_slice->data, '"', buffer_slice->size);
+        if (next_quotes == NULL) {
+            thsn_slice_advance_unsafe(buffer_slice, buffer_slice->size);
+            break;
+        }
+
+        if (next_quotes == buffer_slice->data) {
+            thsn_slice_advance_unsafe(buffer_slice, 1);
+            break;
+        }
+
+        bool escaped = false;
+        for (const char* slash_iterator = next_quotes - 1;
+             slash_iterator >= buffer_slice->data && *slash_iterator == '\\';
+             --slash_iterator) {
+            escaped = !escaped;
+        }
+
+        if (!escaped) {
+            const size_t step_size = next_quotes - buffer_slice->data;
+            thsn_slice_advance_unsafe(buffer_slice, step_size + 1);
+            break;
+        }
+        // `+1` to step over the escaped quote
+        const size_t step_size = (next_quotes - buffer_slice->data) + 1;
+        thsn_slice_advance_unsafe(buffer_slice, step_size);
+    }
+}
+
+int thsn_preparse_thread(void* user_data) {
+    ThsnThreadContext* thread_context = (ThsnThreadContext*)user_data;
+    if (thsn_preparse_buffer(
+            thread_context->buffer_slice,
+            &thread_context->parsing_results[0].parse_result,
+            &thread_context->parsing_results[0].preparsed_table) !=
+        THSN_RESULT_SUCCESS) {
+        thread_context->parsing_results[0].failed = true;
+    }
+
+    ThsnSlice buffer_slice = thread_context->buffer_slice;
+    thsn_advance_after_end_of_string(&buffer_slice);
+    if (thsn_preparse_buffer(
+            thread_context->buffer_slice,
+            &thread_context->parsing_results[1].parse_result,
+            &thread_context->parsing_results[1].preparsed_table) !=
+        THSN_RESULT_SUCCESS) {
+        thread_context->parsing_results[1].failed = true;
+    }
+
+    atomic_store_explicit(&thread_context->completed, true,
+                          memory_order_release);
+    return 0;
 }
