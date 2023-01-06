@@ -21,6 +21,10 @@ inline ThsnSlice thsn_slice_make(const char* data, size_t size) {
     return (ThsnSlice){.data = data, .size = size};
 }
 
+inline const char* thsn_slice_end(ThsnSlice slice) {
+    return slice.data + slice.size;
+}
+
 inline ThsnResult thsn_slice_from_c_str(const char* data,
                                         ThsnSlice* /*out*/ result_slice) {
     BAIL_ON_NULL_INPUT(data);

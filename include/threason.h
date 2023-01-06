@@ -51,6 +51,8 @@ typedef struct {
 #define THSN_VALUE_HANDLE_NOT_FOUND \
     (ThsnValueHandle) { .chunk_no = -1, .offset = -1 }
 
+#define THSN_VALUE_HANDLE_IS_NOT_FOUND(v) ((v).chunk_no == (uint8_t)-1)
+
 /*! Poor man's &[u8]. */
 typedef struct {
     size_t size;
@@ -113,6 +115,9 @@ extern ThsnResult thsn_parsed_json_free(ThsnParsedJson** /*in*/ parsed_json);
 /*! Parse JSON string into JSON tree. */
 extern ThsnResult thsn_parse_buffer(ThsnSlice* json_str_slice,
                                     ThsnParsedJson* /*out*/ parsed_json);
+
+extern ThsnResult thsn_parse_thread_per_chunk(
+    ThsnSlice* json_str_slice, ThsnParsedJson* /*out*/ parsed_json);
 
 /*! Enumerate JSON tree using function from vtable */
 extern ThsnResult thsn_visit(const ThsnParsedJson* parsed_json,
