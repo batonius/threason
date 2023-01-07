@@ -25,3 +25,6 @@ ThsnResult thsn_vector_store_string(ThsnVector* /*in/out*/ vector,
 ThsnResult thsn_slice_read_string(ThsnSlice stored_string_slice,
                                   ThsnSlice* /*out*/ string_slice,
                                   size_t* /*out*/ stored_length);
+
+ThsnResult thsn_vector_store_value_handle(ThsnVector* /*in/out*/ vector,
+                                          ThsnValueHandle value_handle);

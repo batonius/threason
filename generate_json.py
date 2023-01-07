@@ -6,7 +6,7 @@ from sys import stdout
 
 faker = Faker()
 
-ARRAY_ELEM = 100
+ARRAY_ELEM = 1000
 OBJECT_ELEM = 1000
 
 result = []

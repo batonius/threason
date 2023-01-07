@@ -125,16 +125,23 @@ int main(int argc, char** argv) {
     ThsnSlice input_slice = {.data = json_str, .size = json_str_len};
     ThsnParsedJson* parsed_json;
 
-    if (thsn_parsed_json_allocate(&parsed_json, 1) != THSN_RESULT_SUCCESS) {
+    if (thsn_parsed_json_allocate(&parsed_json, 10) != THSN_RESULT_SUCCESS) {
         fprintf(stderr, "Can't allocate_result\n");
         return 1;
     }
 
-    if (thsn_parse_buffer(&input_slice, parsed_json) != THSN_RESULT_SUCCESS) {
-        fprintf(stderr, "Can't parse input string\n");
+    if (thsn_parse_thread_per_chunk(&input_slice, parsed_json) !=
+        THSN_RESULT_SUCCESS) {
+        // if (thsn_parse_buffer(&input_slice, parsed_json) !=
+        // THSN_RESULT_SUCCESS) {
+        //     fprintf(stderr, "Can't parse input string\n");
         return 1;
     }
-    fprintf(stderr, "Parse result size: %zu\n", parsed_json->chunks[0].size);
+    fprintf(stderr, "Parse result size: ");
+    for (size_t i = 0; i < parsed_json->chunks_count; ++i) {
+        fprintf(stderr, "%zu, ", parsed_json->chunks[i].size);
+    }
+    fprintf(stderr, "\n");
     size_t offset = 0;
     if (thsn_visit(parsed_json, &visitor_vtable, (void*)&offset) !=
         THSN_RESULT_SUCCESS) {

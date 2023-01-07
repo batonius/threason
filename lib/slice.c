@@ -4,6 +4,8 @@ ThsnSlice thsn_slice_make_empty();
 
 ThsnSlice thsn_slice_make(const char* data, size_t size);
 
+const char* thsn_slice_end(ThsnSlice slice);
+
 ThsnResult thsn_slice_from_c_str(const char* data,
                                  ThsnSlice* /*out*/ result_slice);
 
