@@ -1,3 +1,5 @@
+#include <stdio.h>
+
 #include "parser.h"
 #include "stdatomic.h"
 #include "threads.h"
@@ -15,8 +17,6 @@ typedef enum {
 } ThsnPreparseScenario;
 
 typedef struct {
-    /* Completion flag */
-    volatile atomic_bool completed;
     /* Thread inputs */
     ThsnSlice subbuffer_slice;
     uint8_t chunk_no;
@@ -25,6 +25,8 @@ typedef struct {
         ThsnOwningSlice pp_table;
         ThsnOwningSlice parse_result;
         bool failed;
+        /* Completion flag */
+        volatile atomic_bool completed;
     } parsing_results[2];
     ThsnPreparseScenario pp_scenario;
 } ThsnThreadContext;
@@ -92,18 +94,29 @@ static ThsnResult thsn_pp_iter_advance_to_char(ThsnPreparseIterator* pp_iter,
             break;
         }
     }
+    ThsnPreparseScenario results_offset =
+        in_string ? THSN_PREPARSE_STARTS_IN_STRING
+                  : THSN_PREPARSE_STARTS_NOT_IN_STRING;
     // We have new current_thread_conext here, wait for it
+#ifdef METRICS
+    size_t yield_count = 0;
+#endif
     while (true) {
-        if (atomic_load_explicit(&pp_iter->current_thread_context->completed,
+        if (atomic_load_explicit(&pp_iter->current_thread_context
+                                      ->parsing_results[results_offset]
+                                      .completed,
                                  memory_order_acquire)) {
             break;
         } else {
             thrd_yield();
+#ifdef METRICS
+            ++yield_count;
+#endif
         }
     }
-    ThsnPreparseScenario results_offset =
-        in_string ? THSN_PREPARSE_STARTS_IN_STRING
-                  : THSN_PREPARSE_STARTS_NOT_IN_STRING;
+#ifdef METRICS
+    fprintf(stderr, "Yelded %zu times\n", yield_count);
+#endif
     pp_iter->current_thread_context->pp_scenario = results_offset;
     if (pp_iter->current_thread_context->parsing_results[results_offset]
             .failed) {
@@ -194,31 +207,36 @@ static void thsn_advance_after_end_of_string(ThsnSlice* buffer_slice) {
 static ThsnResult thsn_preparse_buffer(ThsnSlice buffer_slice,
                                        ThsnOwningSlice* parse_result,
                                        ThsnOwningSlice* preparsed_table) {
+    ThsnVector preparsed_vector = thsn_vector_make_empty();
+    BAIL_ON_ERROR(thsn_vector_allocate(&preparsed_vector, 1024));
     ThsnParserContext parser_context;
-    ThsnVector preparsed_vector = {0};
     BAIL_ON_ERROR(thsn_parser_context_init(&parser_context));
-    char c;
+#ifdef METRICS
+    size_t total_preparsed = 0;
+#endif
+    /* TODO: try switching single-pass walkthrough */
     while (true) {
-        /* TODO: try tokenizing for early error */
-        /* Fast-forwarding to the next meaningful value */
-        while (thsn_slice_try_consume_char(&buffer_slice, &c)) {
-            if (c == '{' || c == '[') {
-                thsn_slice_rewind_unsafe(&buffer_slice, 1);
-                break;
-            } else if (c == '\"') {
-                thsn_advance_after_end_of_string(&buffer_slice);
+        ThsnToken token;
+        ThsnSlice token_slice;
+        /* Tokenizing/parsing failures are ok since the buffer isn't
+              expected to be well-formed */
+        do {
+            GOTO_ON_ERROR(thsn_next_token(&buffer_slice, &token_slice, &token),
+                          success_cleanup);
+            if (token == THSN_TOKEN_EOF) {
+                goto success_cleanup;
             }
-        }
-        if (thsn_slice_is_empty(buffer_slice)) {
-            goto success_cleanup;
-        }
-        ThsnPreparsedValue preparsed_value = {.inbuffer_slice = buffer_slice};
+        } while (token != THSN_TOKEN_OPEN_BRACE &&
+                 token != THSN_TOKEN_OPEN_BRACKET);
+        ThsnPreparsedValue preparsed_value = {.inbuffer_slice.data =
+                                                  token_slice.data};
         GOTO_ON_ERROR(thsn_parser_next_value_offset(
                           &parser_context, &preparsed_value.value_offset),
                       error_cleanup);
-        ThsnToken token;
-        ThsnSlice token_slice;
         bool finished = false;
+        GOTO_ON_ERROR(thsn_parser_parse_next_token(&parser_context, token,
+                                                   token_slice, &finished),
+                      success_cleanup);
         while (!finished) {
             /* Tokenizing/parsing failures are ok since the buffer isn't
               expected to be well-formed */
@@ -230,11 +248,18 @@ static ThsnResult thsn_preparse_buffer(ThsnSlice buffer_slice,
         }
         preparsed_value.inbuffer_slice.size =
             buffer_slice.data - preparsed_value.inbuffer_slice.data;
+#ifdef METRICS
+        total_preparsed += preparsed_value.inbuffer_slice.size;
+#endif
         GOTO_ON_ERROR(THSN_VECTOR_PUSH_VAR(preparsed_vector, preparsed_value),
                       error_cleanup);
         GOTO_ON_ERROR(thsn_parser_reset_state(&parser_context), error_cleanup);
     }
 success_cleanup:
+#ifdef METRICS
+    fprintf(stderr, "Total preparsed %zu, skipped %zu\n", total_preparsed,
+            buffer_slice.size);
+#endif
     thsn_parser_context_finish(&parser_context, parse_result);
     *preparsed_table = thsn_vector_as_slice(preparsed_vector);
     return THSN_RESULT_SUCCESS;
@@ -246,24 +271,37 @@ error_cleanup:
 
 static int thsn_preparse_thread(void* user_data) {
     ThsnThreadContext* thread_context = (ThsnThreadContext*)user_data;
-    if (thsn_preparse_buffer(thread_context->subbuffer_slice,
-                             &thread_context->parsing_results[0].parse_result,
-                             &thread_context->parsing_results[0].pp_table) !=
-        THSN_RESULT_SUCCESS) {
-        thread_context->parsing_results[0].failed = true;
-    }
 
     ThsnSlice subbuffer_slice = thread_context->subbuffer_slice;
     thsn_advance_after_end_of_string(&subbuffer_slice);
-    if (thsn_preparse_buffer(subbuffer_slice,
-                             &thread_context->parsing_results[1].parse_result,
-                             &thread_context->parsing_results[1].pp_table) !=
-        THSN_RESULT_SUCCESS) {
-        thread_context->parsing_results[1].failed = true;
+    if (thsn_preparse_buffer(
+            subbuffer_slice,
+            &thread_context->parsing_results[THSN_PREPARSE_STARTS_IN_STRING]
+                 .parse_result,
+            &thread_context->parsing_results[THSN_PREPARSE_STARTS_IN_STRING]
+                 .pp_table) != THSN_RESULT_SUCCESS) {
+        thread_context->parsing_results[THSN_PREPARSE_STARTS_IN_STRING].failed =
+            true;
     }
+    atomic_store_explicit(
+        &thread_context->parsing_results[THSN_PREPARSE_STARTS_IN_STRING]
+             .completed,
+        true, memory_order_release);
 
-    atomic_store_explicit(&thread_context->completed, true,
-                          memory_order_release);
+    if (thsn_preparse_buffer(
+            thread_context->subbuffer_slice,
+            &thread_context->parsing_results[THSN_PREPARSE_STARTS_NOT_IN_STRING]
+                 .parse_result,
+            &thread_context->parsing_results[THSN_PREPARSE_STARTS_NOT_IN_STRING]
+                 .pp_table) != THSN_RESULT_SUCCESS) {
+        thread_context->parsing_results[THSN_PREPARSE_STARTS_NOT_IN_STRING]
+            .failed = true;
+    }
+    atomic_store_explicit(
+        &thread_context->parsing_results[THSN_PREPARSE_STARTS_NOT_IN_STRING]
+             .completed,
+        true, memory_order_release);
+
     return 0;
 }
 
@@ -279,6 +317,9 @@ static int thsn_main_thread(void* user_data) {
     ThsnToken token;
     ThsnSlice token_slice;
     bool finished = false;
+#ifdef METRICS
+    size_t total_skipped = 0;
+#endif
     while (!finished) {
         ThsnValueHandle value_handle = THSN_VALUE_HANDLE_NOT_FOUND;
         size_t inbuffer_value_size = 0;
@@ -314,10 +355,17 @@ static int thsn_main_thread(void* user_data) {
                                      inbuffer_value_size - token_slice.size, 0,
                                      &buffer_slice),
                 error_cleanup);
+#ifdef METRICS
+            total_skipped += inbuffer_value_size - token_slice.size;
+#endif
         }
     }
     BAIL_ON_ERROR(thsn_parser_context_finish(
         &parser_context, &main_thread_context->parse_result));
+#ifdef METRICS
+    fprintf(stderr, "Total skipped %zu, total parsed %zu\n", total_skipped,
+            main_thread_context->buffer_slice.size - total_skipped);
+#endif
     return 0;
 error_cleanup:
     thsn_parser_context_finish(&parser_context, NULL);
@@ -335,7 +383,7 @@ ThsnResult thsn_parse_thread_per_chunk(ThsnSlice* json_str_slice,
     ThsnThreadContext* thread_contexts = aligned_alloc(
         _Alignof(ThsnThreadContext), sizeof(ThsnThreadContext) * threads_count);
     thread_contexts[0] = (ThsnThreadContext){0};
-    const size_t subbuffer_size = json_str_slice->size / threads_count;
+    size_t subbuffer_size = json_str_slice->size / threads_count;
     size_t current_offset =
         json_str_slice->size - subbuffer_size * (threads_count - 1);
     GOTO_ON_ERROR(thsn_slice_at_offset(*json_str_slice, 0, current_offset,
@@ -344,10 +392,17 @@ ThsnResult thsn_parse_thread_per_chunk(ThsnSlice* json_str_slice,
     GOTO_ON_ERROR(thsn_slice_truncate(&thread_contexts[0].subbuffer_slice,
                                       current_offset),
                   error_cleanup);
+    fprintf(stderr, "Thread 0: buffer size %zu\n", current_offset);
     for (size_t i = 1; i < threads_count; ++i) {
         thread_contexts[i] = (ThsnThreadContext){0};
-        thread_contexts[i].completed = false;
         thread_contexts[i].chunk_no = i;
+        size_t buffer_left = json_str_slice->size - current_offset;
+        if (buffer_left == 0) {
+            break;
+        } else if (buffer_left <= subbuffer_size) {
+            subbuffer_size = buffer_left;
+        }
+        fprintf(stderr, "Thread %zu: buffer size %zu\n", i, subbuffer_size);
         GOTO_ON_ERROR(thsn_slice_at_offset(*json_str_slice, current_offset,
                                            subbuffer_size,
                                            &thread_contexts[i].subbuffer_slice),
@@ -355,10 +410,10 @@ ThsnResult thsn_parse_thread_per_chunk(ThsnSlice* json_str_slice,
         GOTO_ON_ERROR(thsn_slice_truncate(&thread_contexts[i].subbuffer_slice,
                                           subbuffer_size),
                       error_cleanup);
-        current_offset += subbuffer_size;
         thrd_t thread;
         thrd_create(&thread, thsn_preparse_thread, &thread_contexts[i]);
         GOTO_ON_ERROR(THSN_VECTOR_PUSH_VAR(threads, thread), error_cleanup);
+        current_offset += subbuffer_size;
     }
     ThsnMainThreadContext main_thread_context = {
         .preparse_thread_contexts =
@@ -379,11 +434,29 @@ ThsnResult thsn_parse_thread_per_chunk(ThsnSlice* json_str_slice,
     /* Fill in results */
     parsed_json->chunks[0] = main_thread_context.parse_result;
     for (size_t i = 1; i < parsed_json->chunks_count; ++i) {
-        parsed_json->chunks[i] =
-            thread_contexts[i]
-                .parsing_results[thread_contexts[i].pp_scenario]
-                .parse_result;
-        // TODO free all the owning slices
+        if (thread_contexts[i].pp_scenario == THSN_PREPARSE_STARTS_IN_STRING) {
+            parsed_json->chunks[i] =
+                thread_contexts[i]
+                    .parsing_results[THSN_PREPARSE_STARTS_IN_STRING]
+                    .parse_result;
+            free((void*)thread_contexts[i]
+                     .parsing_results[THSN_PREPARSE_STARTS_NOT_IN_STRING]
+                     .parse_result.data);
+        } else {
+            parsed_json->chunks[i] =
+                thread_contexts[i]
+                    .parsing_results[THSN_PREPARSE_STARTS_NOT_IN_STRING]
+                    .parse_result;
+            free((void*)thread_contexts[i]
+                     .parsing_results[THSN_PREPARSE_STARTS_IN_STRING]
+                     .parse_result.data);
+        }
+        free((void*)thread_contexts[i]
+                 .parsing_results[THSN_PREPARSE_STARTS_IN_STRING]
+                 .pp_table.data);
+        free((void*)thread_contexts[i]
+                 .parsing_results[THSN_PREPARSE_STARTS_NOT_IN_STRING]
+                 .pp_table.data);
     }
     thsn_vector_free(&threads);
     free(thread_contexts);

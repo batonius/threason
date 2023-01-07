@@ -23,7 +23,7 @@ endif
 ifdef DEBUG
 	CFLAGS+= -g -O0
 else ifdef DEBUGO3
-	CFLAGS+= -g -O3
+	CFLAGS+= -g -O3 -fno-omit-frame-pointer
 else
     CFLAGS+= -O3
 	LDFLAGS+= -s
@@ -37,6 +37,10 @@ endif
 ifdef UBSAN
 	CFLAGS+= -fsanitize=undefined
 	LDFLAGS+= -fsanitize=undefined
+endif
+
+ifdef METRICS
+	CFLAGS+= -DMETRICS
 endif
 
 .SUFFIXES:

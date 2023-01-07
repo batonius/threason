@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #include "threason.h"
 
@@ -91,8 +92,6 @@ ThsnVisitorResult visit_object_end(const ThsnVisitorContext* context,
 }
 
 int main(int argc, char** argv) {
-    (void)argc;
-    (void)argv;
     ThsnVisitorVTable visitor_vtable = {
         .visit_null = visit_null,
         .visit_bool = visit_bool,
@@ -106,8 +105,20 @@ int main(int argc, char** argv) {
 
     FILE* file = stdin;
 
+    int thread_count = 1;
+
     if (argc > 1) {
-        file = fopen(argv[1], "rb");
+        thread_count = atoi(argv[1]);
+    }
+
+    if (thread_count == 0) {
+        thread_count = 1;
+    } else if (thread_count > 16) {
+        thread_count = 16;
+    }
+
+    if (argc > 2) {
+        file = fopen(argv[2], "rb");
     }
     char* json_str = NULL;
     size_t json_str_len = 0;
@@ -125,16 +136,34 @@ int main(int argc, char** argv) {
     ThsnSlice input_slice = {.data = json_str, .size = json_str_len};
     ThsnParsedJson* parsed_json;
 
-    if (thsn_parsed_json_allocate(&parsed_json, 10) != THSN_RESULT_SUCCESS) {
+    if (thsn_parsed_json_allocate(&parsed_json, thread_count) !=
+        THSN_RESULT_SUCCESS) {
         fprintf(stderr, "Can't allocate_result\n");
         return 1;
     }
 
-    if (thsn_parse_thread_per_chunk(&input_slice, parsed_json) !=
-        THSN_RESULT_SUCCESS) {
-        // if (thsn_parse_buffer(&input_slice, parsed_json) !=
-        // THSN_RESULT_SUCCESS) {
-        //     fprintf(stderr, "Can't parse input string\n");
+    ThsnResult parsing_result;
+
+    struct timespec start_time;
+    clock_gettime(CLOCK_MONOTONIC, &start_time);
+    if (thread_count == 1) {
+        parsing_result = thsn_parse_buffer(&input_slice, parsed_json);
+    } else {
+        parsing_result = thsn_parse_thread_per_chunk(&input_slice, parsed_json);
+    }
+    struct timespec end_time;
+    clock_gettime(CLOCK_MONOTONIC, &end_time);
+    end_time.tv_sec -= start_time.tv_sec;
+    if (end_time.tv_nsec < start_time.tv_nsec) {
+        --end_time.tv_sec;
+        end_time.tv_nsec += 1000000000LL - start_time.tv_nsec;
+    } else {
+        end_time.tv_nsec -= start_time.tv_nsec;
+    }
+    fprintf(stderr, "Elapsed %luus\n", end_time.tv_nsec / 1000);
+
+    if (parsing_result != THSN_RESULT_SUCCESS) {
+        fprintf(stderr, "Can't parse input string\n");
         return 1;
     }
     fprintf(stderr, "Parse result size: ");
