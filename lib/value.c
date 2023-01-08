@@ -176,7 +176,6 @@ ThsnResult thsn_value_read_number(const ThsnParsedJson* parsed_json,
         case THSN_TAG_INT: {
             switch (thsn_tag_size(value_tag)) {
                 case THSN_TAG_SIZE_ZERO:
-                    *value = 0;
                     break;
                 case sizeof(int8_t): {
                     int8_t int8_value;
