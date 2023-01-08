@@ -193,7 +193,7 @@ static ThsnResult thsn_parser_parse_next_array_element(
     (void)token_slice;
     if (token == THSN_TOKEN_CLOSED_BRACKET) {
         BAIL_ON_ERROR(thsn_parser_store_composite_elements_table(
-            parser_context, /*sort_as_kv = */ false));
+            parser_context, /* reserve_sorted_table = */ false));
         parser_context->state = THSN_PARSER_STATE_FINISH;
         return THSN_RESULT_SUCCESS;
     }
@@ -259,7 +259,7 @@ static ThsnResult thsn_parser_parse_kv_end(ThsnToken token,
     (void)token_slice;
     if (token == THSN_TOKEN_CLOSED_BRACE) {
         BAIL_ON_ERROR(thsn_parser_store_composite_elements_table(
-            parser_context, /*sort_as_kv=*/true));
+            parser_context, /*reserve_sorted_table=*/true));
         parser_context->state = THSN_PARSER_STATE_FINISH;
         return THSN_RESULT_SUCCESS;
     }

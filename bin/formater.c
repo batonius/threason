@@ -7,7 +7,7 @@
 
 void print_offset(size_t offset) {
     for (size_t i = 0; i < offset; ++i) {
-        printf("    ");
+        printf("  ");
     }
 }
 
@@ -20,7 +20,7 @@ void print_prefix(const ThsnVisitorContext* context, size_t offset) {
 
 void print_postfix(const ThsnVisitorContext* context) {
     if ((context->in_array || context->in_object) && !context->last) {
-        printf(", ");
+        printf(",");
     }
     printf("\n");
 }
@@ -122,9 +122,9 @@ int main(int argc, char** argv) {
     }
     char* json_str = NULL;
     size_t json_str_len = 0;
-    char buffer[1024];
+    char buffer[1024 * 1024];
     do {
-        size_t read_len = fread(buffer, 1, 1024, file);
+        size_t read_len = fread(buffer, 1, 1024 * 1024, file);
         if (read_len == 0) {
             break;
         }
