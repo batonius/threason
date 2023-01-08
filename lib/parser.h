@@ -24,8 +24,9 @@ typedef struct {
 
 ThsnResult thsn_parser_context_init(ThsnParserContext* parser_context);
 
-ThsnResult thsn_parser_context_finish(ThsnParserContext* /*in*/ parser_context,
-                                      ThsnOwningSlice* /*out*/ parsing_result);
+ThsnResult thsn_parser_context_finish(
+    ThsnParserContext* /*in*/ parser_context,
+    ThsnOwningMutSlice* /*out*/ parsing_result);
 
 ThsnResult thsn_parser_parse_next_token(ThsnParserContext* parser_context,
                                         ThsnToken token, ThsnSlice token_slice,

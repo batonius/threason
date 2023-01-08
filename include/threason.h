@@ -59,6 +59,13 @@ typedef struct {
     const char* data;
 } ThsnSlice;
 
+typedef struct {
+    size_t size;
+    char* data;
+} ThsnMutSlice;
+
+typedef ThsnMutSlice ThsnOwningMutSlice;
+
 /*! Value's context for `::thsn_visit` enumeration */
 typedef struct {
     ThsnSlice key;
@@ -67,12 +74,10 @@ typedef struct {
     bool last;
 } ThsnVisitorContext;
 
-typedef ThsnSlice ThsnOwningSlice;
-
 /*! */
 typedef struct {
     size_t chunks_count;
-    ThsnOwningSlice chunks[];
+    ThsnOwningMutSlice chunks[];
 } ThsnParsedJson;
 
 /*! A slice with array elements, should only be used with `thsn_value_array_*`
@@ -120,7 +125,7 @@ extern ThsnResult thsn_parse_thread_per_chunk(
     ThsnSlice* json_str_slice, ThsnParsedJson* /*out*/ parsed_json);
 
 /*! Enumerate JSON tree using function from vtable */
-extern ThsnResult thsn_visit(const ThsnParsedJson* parsed_json,
+extern ThsnResult thsn_visit(ThsnParsedJson* parsed_json,
                              const ThsnVisitorVTable* vtable, void* user_data);
 
 /*! Return JSON type of a value identified by `value_handle`. */
@@ -145,7 +150,7 @@ extern ThsnResult thsn_value_read_string(const ThsnParsedJson* parsed_json,
 
 /*! Read JSON value at `value_handle` as an array. */
 extern ThsnResult thsn_value_read_array(
-    const ThsnParsedJson* parsed_json, ThsnValueHandle value_handle,
+    ThsnParsedJson* parsed_json, ThsnValueHandle value_handle,
     ThsnValueArrayTable* /*out*/ array_table);
 
 /*! Return number of elements in the array. */
@@ -165,7 +170,11 @@ extern ThsnResult thsn_value_array_consume_element(
 
 /*! Read JSON value at `value_handle` as an object. */
 extern ThsnResult thsn_value_read_object(
-    const ThsnParsedJson* parsed_json, ThsnValueHandle value_handle,
+    ThsnParsedJson* parsed_json, ThsnValueHandle value_handle,
+    ThsnValueObjectTable* /*out*/ object_table);
+
+extern ThsnResult thsn_value_read_object_sorted(
+    ThsnParsedJson* parsed_json, ThsnValueHandle value_handle,
     ThsnValueObjectTable* /*out*/ object_table);
 
 /*! Return number of elements in the object. */

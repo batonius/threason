@@ -31,6 +31,7 @@ typedef unsigned char ThsnTag;
 #define THSN_TAG_SIZE_F64 0
 #define THSN_TAG_SIZE_MAX 0xf
 #define THSN_TAG_SIZE_INBOUND 1
+#define THSN_TAG_SIZE_INBOUND_SORTED 2
 
 inline ThsnTag thsn_tag_make(ThsnTagType type, ThsnTagSize size) {
     return (ThsnTag)((type << 4) | (size & 0x0f));

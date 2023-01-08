@@ -5,6 +5,55 @@
 #include "tags.h"
 #include "threason.h"
 
+static int thsn_compare_kv_keys(const void* a, const void* b, void* data) {
+    size_t a_offset;
+    size_t b_offset;
+    memcpy(&a_offset, a, sizeof(size_t));
+    memcpy(&b_offset, b, sizeof(size_t));
+    const ThsnSlice* result_slice = (ThsnSlice*)data;
+    ThsnSlice a_key_slice;
+    ThsnSlice b_key_slice;
+    if (thsn_slice_at_offset(*result_slice, a_offset, 1, &a_key_slice) !=
+        THSN_RESULT_SUCCESS) {
+        return 0;
+    }
+    if (thsn_slice_at_offset(*result_slice, b_offset, 1, &b_key_slice) !=
+        THSN_RESULT_SUCCESS) {
+        return 0;
+    }
+    ThsnSlice a_key_str_slice;
+    ThsnSlice b_key_str_slice;
+    if (thsn_slice_read_string(a_key_slice, &a_key_str_slice, NULL)) {
+        return 0;
+    }
+    if (thsn_slice_read_string(b_key_slice, &b_key_str_slice, NULL)) {
+        return 0;
+    }
+    const size_t min_len = a_key_str_slice.size < b_key_str_slice.size
+                               ? a_key_str_slice.size
+                               : b_key_str_slice.size;
+    const int cmp_result =
+        memcmp(a_key_str_slice.data, b_key_str_slice.data, min_len);
+    if (cmp_result == 0) {
+        if (a_key_str_slice.size == b_key_str_slice.size) {
+            return 0;
+        } else if (a_key_str_slice.size < b_key_str_slice.size) {
+            return -1;
+        } else {
+            return 1;
+        }
+    } else {
+        return cmp_result;
+    }
+}
+
+static ThsnResult thsn_value_sort_elements_table(ThsnMutSlice elements_table,
+                                                 ThsnSlice result_slice) {
+    qsort_r(elements_table.data, elements_table.size / sizeof(size_t),
+            sizeof(size_t), thsn_compare_kv_keys, &result_slice);
+    return THSN_RESULT_SUCCESS;
+}
+
 static ThsnResult thsn_value_read_tagged_value(
     const ThsnParsedJson* parsed_json, ThsnValueHandle value_handle,
     ThsnTag* value_tag, ThsnSlice* value_slice) {
@@ -14,9 +63,23 @@ static ThsnResult thsn_value_read_tagged_value(
     BAIL_WITH_INPUT_ERROR_UNLESS(value_handle.chunk_no <
                                  parsed_json->chunks_count);
     BAIL_ON_ERROR(thsn_slice_at_offset(
-        parsed_json->chunks[value_handle.chunk_no], value_handle.offset,
-        sizeof(ThsnTag), value_slice));
+        THSN_SLICE_UNMUT(parsed_json->chunks[value_handle.chunk_no]),
+        value_handle.offset, sizeof(ThsnTag), value_slice));
     BAIL_ON_ERROR(THSN_SLICE_READ_VAR(*value_slice, *value_tag));
+    return THSN_RESULT_SUCCESS;
+}
+
+static ThsnResult thsn_value_update_tag(ThsnParsedJson* parsed_json,
+                                        ThsnValueHandle value_handle,
+                                        ThsnTag value_tag) {
+    BAIL_ON_NULL_INPUT(parsed_json);
+    BAIL_WITH_INPUT_ERROR_UNLESS(value_handle.chunk_no <
+                                 parsed_json->chunks_count);
+    ThsnMutSlice tag_mut_slice;
+    BAIL_ON_ERROR(thsn_mut_slice_at_offset(
+        parsed_json->chunks[value_handle.chunk_no], value_handle.offset,
+        sizeof(ThsnTag), &tag_mut_slice));
+    BAIL_ON_ERROR(THSN_MUT_SLICE_WRITE_VAR(tag_mut_slice, value_tag));
     return THSN_RESULT_SUCCESS;
 }
 
@@ -169,8 +232,8 @@ static ThsnResult thsn_value_read_string_ex(const ThsnParsedJson* parsed_json,
                                  parsed_json->chunks_count);
     ThsnSlice value_slice;
     BAIL_ON_ERROR(thsn_slice_at_offset(
-        parsed_json->chunks[value_handle.chunk_no], value_handle.offset,
-        sizeof(ThsnTag), &value_slice));
+        THSN_SLICE_UNMUT(parsed_json->chunks[value_handle.chunk_no]),
+        value_handle.offset, sizeof(ThsnTag), &value_slice));
     return thsn_slice_read_string(value_slice, string_slice, consumed_size);
 }
 
@@ -184,8 +247,9 @@ ThsnResult thsn_value_read_string(const ThsnParsedJson* parsed_json,
 }
 
 static ThsnResult thsn_value_read_composite(
-    const ThsnParsedJson* parsed_json, ThsnValueHandle value_handle,
-    ThsnTagType expected_type, ThsnValueCompositeTable* composite_table) {
+    ThsnParsedJson* parsed_json, ThsnValueHandle value_handle,
+    ThsnTagType expected_type, ThsnValueCompositeTable* composite_table,
+    bool read_sorted_table) {
     BAIL_ON_NULL_INPUT(parsed_json);
     BAIL_ON_NULL_INPUT(composite_table);
     BAIL_WITH_INPUT_ERROR_UNLESS(value_handle.chunk_no <
@@ -202,17 +266,34 @@ static ThsnResult thsn_value_read_composite(
         case THSN_TAG_SIZE_ZERO:
             composite_table->elements_table = thsn_slice_make_empty();
             break;
-        case THSN_TAG_SIZE_INBOUND: {
+        case THSN_TAG_SIZE_INBOUND:
+        case THSN_TAG_SIZE_INBOUND_SORTED: {
             size_t table_offset;
             size_t table_len;
             BAIL_ON_ERROR(THSN_SLICE_READ_VAR(value_slice, table_len));
             BAIL_ON_ERROR(THSN_SLICE_READ_VAR(value_slice, table_offset));
+            if (read_sorted_table) {
+                BAIL_ON_ERROR(THSN_SLICE_READ_VAR(value_slice, table_offset));
+            }
             const size_t table_size = table_len * sizeof(size_t);
             BAIL_ON_ERROR(thsn_slice_at_offset(
-                parsed_json->chunks[value_handle.chunk_no], table_offset,
-                table_size, &composite_table->elements_table));
+                THSN_SLICE_UNMUT(parsed_json->chunks[value_handle.chunk_no]),
+                table_offset, table_size, &composite_table->elements_table));
             BAIL_ON_ERROR(thsn_slice_truncate(&composite_table->elements_table,
                                               table_size));
+            if (read_sorted_table &&
+                thsn_tag_size(value_tag) != THSN_TAG_SIZE_INBOUND_SORTED) {
+                BAIL_ON_ERROR(thsn_value_sort_elements_table(
+                    thsn_mut_slice_make(
+                        (char*)composite_table->elements_table.data,
+                        composite_table->elements_table.size),
+                    THSN_SLICE_UNMUT(
+                        parsed_json->chunks[value_handle.chunk_no])));
+                BAIL_ON_ERROR(thsn_value_update_tag(
+                    parsed_json, value_handle,
+                    thsn_tag_make(expected_type,
+                                  THSN_TAG_SIZE_INBOUND_SORTED)));
+            }
             break;
         }
         default:
@@ -221,13 +302,13 @@ static ThsnResult thsn_value_read_composite(
     return THSN_RESULT_SUCCESS;
 }
 
-ThsnResult thsn_value_read_array(const ThsnParsedJson* parsed_json,
+ThsnResult thsn_value_read_array(ThsnParsedJson* parsed_json,
                                  ThsnValueHandle value_handle,
                                  ThsnValueArrayTable* array_table) {
     BAIL_ON_NULL_INPUT(parsed_json);
     BAIL_ON_NULL_INPUT(array_table);
     return thsn_value_read_composite(parsed_json, value_handle, THSN_TAG_ARRAY,
-                                     array_table);
+                                     array_table, false);
 }
 
 size_t thsn_value_array_length(ThsnValueArrayTable array_table) {
@@ -267,13 +348,22 @@ ThsnResult thsn_value_array_consume_element(const ThsnParsedJson* parsed_json,
     return THSN_RESULT_SUCCESS;
 }
 
-ThsnResult thsn_value_read_object(const ThsnParsedJson* parsed_json,
+ThsnResult thsn_value_read_object(ThsnParsedJson* parsed_json,
                                   ThsnValueHandle value_handle,
                                   ThsnValueObjectTable* object_table) {
     BAIL_ON_NULL_INPUT(parsed_json);
     BAIL_ON_NULL_INPUT(object_table);
     return thsn_value_read_composite(parsed_json, value_handle, THSN_TAG_OBJECT,
-                                     object_table);
+                                     object_table, false);
+}
+
+ThsnResult thsn_value_read_object_sorted(
+    ThsnParsedJson* parsed_json, ThsnValueHandle value_handle,
+    ThsnValueObjectTable* sorted_object_table) {
+    BAIL_ON_NULL_INPUT(parsed_json);
+    BAIL_ON_NULL_INPUT(sorted_object_table);
+    return thsn_value_read_composite(parsed_json, value_handle, THSN_TAG_OBJECT,
+                                     sorted_object_table, true);
 }
 
 size_t thsn_value_object_length(ThsnValueObjectTable object_table) {

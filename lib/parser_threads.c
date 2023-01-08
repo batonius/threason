@@ -23,7 +23,7 @@ typedef struct {
     /* Thread outputs */
     struct {
         ThsnOwningSlice pp_table;
-        ThsnOwningSlice parse_result;
+        ThsnOwningMutSlice parse_result;
         bool failed;
         /* Completion flag */
         volatile atomic_bool completed;
@@ -33,14 +33,14 @@ typedef struct {
 
 typedef struct {
     ThsnSlice buffer_slice;
-    ThsnOwningSlice parse_result;
+    ThsnOwningMutSlice parse_result;
     ThsnSlice preparse_thread_contexts;
 } ThsnMainThreadContext;
 
 typedef struct {
     ThsnSlice thread_contexts;
     ThsnThreadContext* current_thread_context;
-    ThsnSlice current_pp_table;
+    ThsnOwningSlice current_pp_table;
     ThsnPreparsedValue current_pp_value;
 } ThsnPreparseIterator;
 
@@ -205,7 +205,7 @@ static void thsn_advance_after_end_of_string(ThsnSlice* buffer_slice) {
 }
 
 static ThsnResult thsn_preparse_buffer(ThsnSlice buffer_slice,
-                                       ThsnOwningSlice* parse_result,
+                                       ThsnOwningMutSlice* parse_result,
                                        ThsnOwningSlice* preparsed_table) {
     ThsnVector preparsed_vector = thsn_vector_make_empty();
     BAIL_ON_ERROR(thsn_vector_allocate(&preparsed_vector, 1024));
@@ -420,7 +420,7 @@ ThsnResult thsn_parse_thread_per_chunk(ThsnSlice* json_str_slice,
             thsn_slice_make((const char*)thread_contexts,
                             sizeof(ThsnThreadContext) * threads_count),
         .buffer_slice = *json_str_slice,
-        .parse_result = thsn_slice_make_empty()};
+        .parse_result = thsn_mut_slice_make_empty()};
     thsn_main_thread(&main_thread_context);
     /* TODO: process failure */
     /* Wait for all threads */

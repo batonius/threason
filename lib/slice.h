@@ -8,10 +8,10 @@
 #include "result.h"
 #include "threason.h"
 
-typedef struct {
-    size_t size;
-    char* data;
-} ThsnMutSlice;
+typedef ThsnSlice ThsnOwningSlice;
+
+#define THSN_SLICE_UNMUT(mut_slice) \
+    thsn_slice_make((mut_slice).data, (mut_slice).size)
 
 inline ThsnSlice thsn_slice_make_empty() {
     return (ThsnSlice){.data = NULL, .size = 0};
@@ -110,6 +110,18 @@ inline ThsnResult thsn_mut_slice_write(ThsnMutSlice* /*in/out*/ mut_slice,
     memcpy(mut_slice->data, data_slice.data, data_slice.size);
     mut_slice->data += data_slice.size;
     mut_slice->size -= data_slice.size;
+    return THSN_RESULT_SUCCESS;
+}
+
+inline ThsnResult thsn_mut_slice_at_offset(
+    ThsnMutSlice base_slice, size_t offset, size_t min_size,
+    ThsnMutSlice* /*out*/ mut_slice_at_offset) {
+    BAIL_ON_NULL_INPUT(mut_slice_at_offset);
+    if (offset > base_slice.size || (base_slice.size - offset) < min_size) {
+        return THSN_RESULT_INPUT_ERROR;
+    }
+    *mut_slice_at_offset =
+        thsn_mut_slice_make(base_slice.data + offset, base_slice.size - offset);
     return THSN_RESULT_SUCCESS;
 }
 

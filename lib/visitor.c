@@ -6,7 +6,7 @@ typedef enum {
     THSN_VISIT_TAG_OBJECT_KV,
 } ThsnVisitTag;
 
-ThsnResult thsn_visit(const ThsnParsedJson* parsed_json,
+ThsnResult thsn_visit(ThsnParsedJson* parsed_json,
                       const ThsnVisitorVTable* vtable, void* user_data) {
 #define PROCESS_VISITOR_RESULT(result)              \
     do {                                            \

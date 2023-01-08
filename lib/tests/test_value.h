@@ -17,8 +17,8 @@ TEST(indexes_object_by_key) {
         thsn_value_type(parsed_json, THSN_VALUE_HANDLE_FIRST, &value_type));
     ASSERT_EQ(value_type, THSN_VALUE_OBJECT);
     ThsnValueObjectTable object_table;
-    ASSERT_SUCCESS(thsn_value_read_object(parsed_json, THSN_VALUE_HANDLE_FIRST,
-                                          &object_table));
+    ASSERT_SUCCESS(thsn_value_read_object_sorted(
+        parsed_json, THSN_VALUE_HANDLE_FIRST, &object_table));
 
     struct {
         const char* key;

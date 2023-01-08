@@ -34,6 +34,10 @@ inline ThsnSlice thsn_vector_as_slice(ThsnVector vector) {
     return thsn_slice_make(vector.buffer, vector.offset);
 }
 
+inline ThsnMutSlice thsn_vector_as_mut_slice(ThsnVector vector) {
+    return thsn_mut_slice_make(vector.buffer, vector.offset);
+}
+
 inline ThsnResult thsn_vector_allocate(ThsnVector* /*out*/ vector,
                                        size_t prealloc_size) {
     BAIL_ON_NULL_INPUT(vector);
