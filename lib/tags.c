@@ -6,25 +6,18 @@ ThsnTagType thsn_tag_type(ThsnTag tag);
 
 ThsnTagSize thsn_tag_size(ThsnTag tag);
 
-ThsnResult thsn_vector_store_tagged_value(ThsnVector* /*in/out*/ vector,
-                                          ThsnTag tag, ThsnSlice value_slice);
+ThsnResult thsn_vector_store_tagged_value(ThsnVector* vector, ThsnTag tag,
+                                          ThsnSlice value_slice);
 
-ThsnResult thsn_vector_store_null(ThsnVector* /*in/out*/ vector);
+ThsnResult thsn_vector_store_null(ThsnVector* vector);
 
-ThsnResult thsn_vector_store_bool(ThsnVector* /*in/out*/ vector, bool value);
+ThsnResult thsn_vector_store_bool(ThsnVector* vector, bool value);
 
-ThsnResult thsn_vector_store_double(ThsnVector* /*in/out*/ vector,
-                                    double value);
+ThsnResult thsn_vector_store_double(ThsnVector* vector, double value);
 
-ThsnResult thsn_vector_store_int(ThsnVector* /*in/out*/ vector,
-                                 long long value);
+ThsnResult thsn_vector_store_int(ThsnVector* vector, long long value);
 
-ThsnResult thsn_vector_store_string(ThsnVector* /*in/out*/ vector,
-                                    ThsnSlice string_slice);
-
-ThsnResult thsn_slice_read_string(ThsnSlice stored_string_slice,
-                                  ThsnSlice* /*out*/ string_slice,
-                                  size_t* /*out*/ stored_length);
-
-ThsnResult thsn_vector_store_value_handle(ThsnVector* /*in/out*/ vector,
+ThsnResult thsn_vector_store_value_handle(ThsnVector* vector,
                                           ThsnValueHandle value_handle);
+
+ThsnResult thsn_vector_store_string(ThsnVector* vector, ThsnSlice string_slice);

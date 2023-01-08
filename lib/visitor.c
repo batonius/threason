@@ -6,8 +6,6 @@ typedef enum {
     THSN_VISIT_TAG_OBJECT_KV,
 } ThsnVisitTag;
 
-ThsnResult thsn_visit(ThsnParsedJson* parsed_json,
-                      const ThsnVisitorVTable* vtable, void* user_data) {
 #define PROCESS_VISITOR_RESULT(result)              \
     do {                                            \
         switch ((result)) {                         \
@@ -39,6 +37,11 @@ ThsnResult thsn_visit(ThsnParsedJson* parsed_json,
         }                                                               \
     } while (0)
 
+ThsnResult thsn_visit(ThsnParsedJson* /*mut*/ parsed_json,
+                      const ThsnVisitorVTable* /*in*/ vtable,
+                      void* /*in*/ user_data) {
+    BAIL_ON_NULL_INPUT(parsed_json);
+    BAIL_ON_NULL_INPUT(vtable);
     ThsnVisitorContext context = {
         .key = thsn_slice_make_empty(),
         .in_array = false,
@@ -193,8 +196,4 @@ success_cleanup:
 error_cleanup:
     thsn_vector_free(&stack);
     return THSN_RESULT_INPUT_ERROR;
-
-#undef CALL_VISITOR2
-#undef CALL_VISITOR3
-#undef PROCESS_VISITOR_RESULT
 }

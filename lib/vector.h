@@ -14,6 +14,32 @@ typedef struct {
     size_t offset;
 } ThsnVector;
 
+#define THSN_VECTOR_PUSH_VAR(vector, var) \
+    thsn_vector_push(&(vector), THSN_SLICE_FROM_VAR(var))
+
+#define THSN_VECTOR_PUSH_2_VARS(vector, var1, var2)               \
+    THSN_VECTOR_PUSH_VAR((vector), (var1)) == THSN_RESULT_SUCCESS \
+        ? THSN_VECTOR_PUSH_VAR((vector), (var2))                  \
+        : THSN_RESULT_INPUT_ERROR
+
+#define THSN_VECTOR_PUSH_3_VARS(vector, var1, var2, var3)         \
+    THSN_VECTOR_PUSH_VAR((vector), (var1)) == THSN_RESULT_SUCCESS \
+        ? THSN_VECTOR_PUSH_2_VARS((vector), (var2), (var3))       \
+        : THSN_RESULT_INPUT_ERROR
+
+#define THSN_VECTOR_POP_VAR(vector, var) \
+    thsn_vector_pop(&(vector), THSN_MUT_SLICE_FROM_VAR(var))
+
+#define THSN_VECTOR_POP_2_VARS(vector, var1, var2)               \
+    THSN_VECTOR_POP_VAR((vector), (var1)) == THSN_RESULT_SUCCESS \
+        ? THSN_VECTOR_POP_VAR((vector), (var2))                  \
+        : THSN_RESULT_INPUT_ERROR
+
+#define THSN_VECTOR_POP_3_VARS(vector, var1, var2, var3)         \
+    THSN_VECTOR_POP_VAR((vector), (var1)) == THSN_RESULT_SUCCESS \
+        ? THSN_VECTOR_POP_2_VARS((vector), (var2), (var3))       \
+        : THSN_RESULT_INPUT_ERROR
+
 inline ThsnVector thsn_vector_make_empty() {
     return (ThsnVector){.buffer = NULL, .capacity = 0, .offset = 0};
 }
@@ -38,7 +64,7 @@ inline ThsnMutSlice thsn_vector_as_mut_slice(ThsnVector vector) {
     return thsn_mut_slice_make(vector.buffer, vector.offset);
 }
 
-inline ThsnResult thsn_vector_allocate(ThsnVector* /*out*/ vector,
+inline ThsnResult thsn_vector_allocate(ThsnVector* vector,
                                        size_t prealloc_size) {
     BAIL_ON_NULL_INPUT(vector);
     vector->buffer = malloc(prealloc_size);
@@ -48,7 +74,7 @@ inline ThsnResult thsn_vector_allocate(ThsnVector* /*out*/ vector,
     return THSN_RESULT_SUCCESS;
 }
 
-inline ThsnResult thsn_vector_free(ThsnVector* /*in/out*/ vector) {
+inline ThsnResult thsn_vector_free(ThsnVector* vector) {
     BAIL_ON_NULL_INPUT(vector);
     if (vector->buffer != NULL) {
         free(vector->buffer);
@@ -59,10 +85,9 @@ inline ThsnResult thsn_vector_free(ThsnVector* /*in/out*/ vector) {
     return THSN_RESULT_SUCCESS;
 }
 
-/* Invalidates all the pointers within the vector */
-inline ThsnResult thsn_vector_grow(ThsnVector* /*in/out*/ vector,
-                                   size_t data_size,
-                                   ThsnMutSlice* /*out*/ data_mut_slice) {
+/* Invalidates all the pointers into the vector */
+inline ThsnResult thsn_vector_grow(ThsnVector* /*mut*/ vector, size_t data_size,
+                                   ThsnMutSlice* /*maybe out*/ data_mut_slice) {
     BAIL_ON_NULL_INPUT(vector);
     const size_t allocated_space_left = thsn_vector_space_left(*vector);
     if (allocated_space_left < data_size) {
@@ -87,9 +112,9 @@ inline ThsnResult thsn_vector_grow(ThsnVector* /*in/out*/ vector,
 }
 
 /* Never deallocates */
-inline ThsnResult thsn_vector_shrink(ThsnVector* /*in/out*/ vector,
+inline ThsnResult thsn_vector_shrink(ThsnVector* /*mut*/ vector,
                                      size_t shrink_size,
-                                     ThsnSlice* /*out*/ data_slice) {
+                                     ThsnSlice* /*maybe out*/ data_slice) {
     BAIL_ON_NULL_INPUT(vector);
     if (vector->offset < shrink_size) {
         return THSN_RESULT_INPUT_ERROR;
@@ -127,7 +152,7 @@ inline ThsnResult thsn_vector_mut_slice_at_offset(
     return THSN_RESULT_SUCCESS;
 }
 
-inline ThsnResult thsn_vector_push(ThsnVector* /*in/out*/ vector,
+inline ThsnResult thsn_vector_push(ThsnVector* /*mut*/ vector,
                                    ThsnSlice slice) {
     BAIL_ON_NULL_INPUT(vector);
     ThsnMutSlice data_mut_slice;
@@ -136,7 +161,7 @@ inline ThsnResult thsn_vector_push(ThsnVector* /*in/out*/ vector,
     return THSN_RESULT_SUCCESS;
 }
 
-inline ThsnResult thsn_vector_pop(ThsnVector* /*in/out*/ vector,
+inline ThsnResult thsn_vector_pop(ThsnVector* /*mut*/ vector,
                                   ThsnMutSlice mut_slice) {
     BAIL_ON_NULL_INPUT(vector);
     ThsnSlice data_slice;
@@ -144,31 +169,5 @@ inline ThsnResult thsn_vector_pop(ThsnVector* /*in/out*/ vector,
     BAIL_ON_ERROR(thsn_slice_read(&data_slice, mut_slice));
     return THSN_RESULT_SUCCESS;
 }
-
-#define THSN_VECTOR_PUSH_VAR(vector, var) \
-    thsn_vector_push(&(vector), THSN_SLICE_FROM_VAR(var))
-
-#define THSN_VECTOR_PUSH_2_VARS(vector, var1, var2)               \
-    THSN_VECTOR_PUSH_VAR((vector), (var1)) == THSN_RESULT_SUCCESS \
-        ? THSN_VECTOR_PUSH_VAR((vector), (var2))                  \
-        : THSN_RESULT_INPUT_ERROR
-
-#define THSN_VECTOR_PUSH_3_VARS(vector, var1, var2, var3)         \
-    THSN_VECTOR_PUSH_VAR((vector), (var1)) == THSN_RESULT_SUCCESS \
-        ? THSN_VECTOR_PUSH_2_VARS((vector), (var2), (var3))       \
-        : THSN_RESULT_INPUT_ERROR
-
-#define THSN_VECTOR_POP_VAR(vector, var) \
-    thsn_vector_pop(&(vector), THSN_MUT_SLICE_FROM_VAR(var))
-
-#define THSN_VECTOR_POP_2_VARS(vector, var1, var2)               \
-    THSN_VECTOR_POP_VAR((vector), (var1)) == THSN_RESULT_SUCCESS \
-        ? THSN_VECTOR_POP_VAR((vector), (var2))                  \
-        : THSN_RESULT_INPUT_ERROR
-
-#define THSN_VECTOR_POP_3_VARS(vector, var1, var2, var3)         \
-    THSN_VECTOR_POP_VAR((vector), (var1)) == THSN_RESULT_SUCCESS \
-        ? THSN_VECTOR_POP_2_VARS((vector), (var2), (var3))       \
-        : THSN_RESULT_INPUT_ERROR
 
 #endif

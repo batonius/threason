@@ -15,6 +15,7 @@ typedef enum {
     THSN_RESULT_SUCCESS,
     THSN_RESULT_OUT_OF_MEMORY_ERROR,
     THSN_RESULT_INPUT_ERROR,
+    THSN_RESULT_NULL_INPUT_ERROR,
 } ThsnResult;
 
 /*! Controls enumeration from within visitor functions. Defaults to
@@ -65,6 +66,7 @@ typedef struct {
 } ThsnMutSlice;
 
 typedef ThsnMutSlice ThsnOwningMutSlice;
+typedef ThsnSlice ThsnOwningSlice;
 
 /*! Value's context for `::thsn_visit` enumeration */
 typedef struct {
@@ -111,46 +113,47 @@ typedef struct {
 } ThsnVisitorVTable;
 
 /*! Allocate space for parsing result */
-extern ThsnResult thsn_parsed_json_allocate(ThsnParsedJson** parsed_json,
-                                            uint8_t chunks_count);
+extern ThsnResult thsn_parsed_json_allocate(
+    ThsnParsedJson** /*out*/ parsed_json, uint8_t chunks_count);
 
 /*! Free parsing result */
 extern ThsnResult thsn_parsed_json_free(ThsnParsedJson** /*in*/ parsed_json);
 
 /*! Parse JSON string into JSON tree. */
-extern ThsnResult thsn_parse_buffer(ThsnSlice* json_str_slice,
+extern ThsnResult thsn_parse_buffer(ThsnSlice* /*mut*/ json_str_slice,
                                     ThsnParsedJson* /*out*/ parsed_json);
 
 extern ThsnResult thsn_parse_thread_per_chunk(
-    ThsnSlice* json_str_slice, ThsnParsedJson* /*out*/ parsed_json);
+    ThsnSlice* /*mut*/ json_str_slice, ThsnParsedJson* /*out*/ parsed_json);
 
 /*! Enumerate JSON tree using function from vtable */
-extern ThsnResult thsn_visit(ThsnParsedJson* parsed_json,
-                             const ThsnVisitorVTable* vtable, void* user_data);
+extern ThsnResult thsn_visit(ThsnParsedJson* /*mut*/ parsed_json,
+                             const ThsnVisitorVTable* /*in*/ vtable,
+                             void* /*in*/ user_data);
 
 /*! Return JSON type of a value identified by `value_handle`. */
-extern ThsnResult thsn_value_type(const ThsnParsedJson* parsed_json,
+extern ThsnResult thsn_value_type(const ThsnParsedJson* /*in*/ parsed_json,
                                   ThsnValueHandle value_handle,
                                   ThsnValueType* /*out*/ value_type);
 
 /*! Read JSON value at `value_handle` as a bool. */
-extern ThsnResult thsn_value_read_bool(const ThsnParsedJson* parsed_json,
+extern ThsnResult thsn_value_read_bool(const ThsnParsedJson* /*in*/ parsed_json,
                                        ThsnValueHandle value_handle,
                                        bool* /*out*/ value);
 
 /*! Read JSON value at `value_handle` as a number. */
-extern ThsnResult thsn_value_read_number(const ThsnParsedJson* parsed_json,
-                                         ThsnValueHandle value_handle,
-                                         double* /*out*/ value);
+extern ThsnResult thsn_value_read_number(
+    const ThsnParsedJson* /*in*/ parsed_json, ThsnValueHandle value_handle,
+    double* /*out*/ value);
 
 /*! Read JSON value at `value_handle` as a string. */
-extern ThsnResult thsn_value_read_string(const ThsnParsedJson* parsed_json,
-                                         ThsnValueHandle value_handle,
-                                         ThsnSlice* /*out*/ string_slice);
+extern ThsnResult thsn_value_read_string(
+    const ThsnParsedJson* /*in*/ parsed_json, ThsnValueHandle value_handle,
+    ThsnSlice* /*out*/ string_slice);
 
 /*! Read JSON value at `value_handle` as an array. */
 extern ThsnResult thsn_value_read_array(
-    ThsnParsedJson* parsed_json, ThsnValueHandle value_handle,
+    ThsnParsedJson* /*in*/ parsed_json, ThsnValueHandle value_handle,
     ThsnValueArrayTable* /*out*/ array_table);
 
 /*! Return number of elements in the array. */
@@ -158,23 +161,23 @@ extern size_t thsn_value_array_length(ThsnValueArrayTable array_table);
 
 /*! Return handle for the n-th element of the array. */
 extern ThsnResult thsn_value_array_element_handle(
-    const ThsnParsedJson* parsed_json, ThsnValueArrayTable array_table,
+    const ThsnParsedJson* /*in*/ parsed_json, ThsnValueArrayTable array_table,
     size_t element_no, ThsnValueHandle* /*out*/ element_handle);
 
 /*! Return the first element in the array, moving the array_table beyond it.
  */
 extern ThsnResult thsn_value_array_consume_element(
-    const ThsnParsedJson* parsed_json,
-    ThsnValueArrayTable* /*in/out*/ array_table,
+    const ThsnParsedJson* /*in*/ parsed_json,
+    ThsnValueArrayTable* /*mut*/ array_table,
     ThsnValueHandle* /*out*/ element_handle);
 
 /*! Read JSON value at `value_handle` as an object. */
 extern ThsnResult thsn_value_read_object(
-    ThsnParsedJson* parsed_json, ThsnValueHandle value_handle,
+    ThsnParsedJson* /*mut*/ parsed_json, ThsnValueHandle value_handle,
     ThsnValueObjectTable* /*out*/ object_table);
 
 extern ThsnResult thsn_value_read_object_sorted(
-    ThsnParsedJson* parsed_json, ThsnValueHandle value_handle,
+    ThsnParsedJson* /*mut*/ parsed_json, ThsnValueHandle value_handle,
     ThsnValueObjectTable* /*out*/ object_table);
 
 /*! Return number of elements in the object. */
@@ -182,19 +185,20 @@ extern size_t thsn_value_object_length(ThsnValueObjectTable object_table);
 
 /*! Return key and handle for the n-th element of the object. */
 extern ThsnResult thsn_value_object_element_handle(
-    const ThsnParsedJson* parsed_json, ThsnValueObjectTable object_table,
+    const ThsnParsedJson* /*in*/ parsed_json, ThsnValueObjectTable object_table,
     size_t element_no, ThsnSlice* /*out*/ key_str_slice,
     ThsnValueHandle* /*out*/ element_handle);
 
 /*! Return the first element in the object, moving the object_table beyond it.
  */
 extern ThsnResult thsn_value_object_consume_element(
-    const ThsnParsedJson* parsed_json, ThsnValueObjectTable* object_table,
-    ThsnSlice* /*out*/ key_slice, ThsnValueHandle* /*out*/ element_handle);
+    const ThsnParsedJson* /*in*/ parsed_json,
+    ThsnValueObjectTable* /*mut*/ object_table, ThsnSlice* /*out*/ key_slice,
+    ThsnValueHandle* /*out*/ element_handle);
 
 /*! Return value handle for the object's field with key equal to key_slice.
  * Sets handle to THSN_VALUE_HANDLE_NOT_FOUND if not found.*/
 extern ThsnResult thsn_value_object_index(
-    const ThsnParsedJson* parsed_json, ThsnValueObjectTable object_table,
+    const ThsnParsedJson* /*in*/ parsed_json, ThsnValueObjectTable object_table,
     ThsnSlice key_slice, ThsnValueHandle* /*out*/ element_handle);
 #endif

@@ -3,11 +3,11 @@
 
 #include "threason.h"
 
-#define BAIL_ON_NULL_INPUT(v)               \
-    do {                                    \
-        if (v == NULL) {                    \
-            return THSN_RESULT_INPUT_ERROR; \
-        }                                   \
+#define BAIL_ON_NULL_INPUT(v)                    \
+    do {                                         \
+        if (v == NULL) {                         \
+            return THSN_RESULT_NULL_INPUT_ERROR; \
+        }                                        \
     } while (0)
 
 #define BAIL_ON_ALLOC_FAILURE(v)                    \

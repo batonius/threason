@@ -4,9 +4,8 @@
 #include "slice.h"
 #include "tokenizer.h"
 
-ThsnResult thsn_next_token(ThsnSlice* /*in/out*/ buffer_slice,
-                           ThsnSlice* /*out*/ token_slice,
-                           ThsnToken* /*out*/ token) {
+ThsnResult thsn_next_token(ThsnSlice* buffer_slice, ThsnSlice* token_slice,
+                           ThsnToken* token) {
     BAIL_ON_NULL_INPUT(buffer_slice);
     BAIL_ON_NULL_INPUT(token_slice);
     BAIL_ON_NULL_INPUT(token);

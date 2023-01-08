@@ -8,10 +8,15 @@
 #include "result.h"
 #include "threason.h"
 
-typedef ThsnSlice ThsnOwningSlice;
+#define THSN_SLICE_FROM_VAR(v) thsn_slice_make((const char*)&(v), sizeof(v))
 
-#define THSN_SLICE_UNMUT(mut_slice) \
-    thsn_slice_make((mut_slice).data, (mut_slice).size)
+#define THSN_MUT_SLICE_FROM_VAR(v) thsn_mut_slice_make((char*)&(v), sizeof(v))
+
+#define THSN_MUT_SLICE_WRITE_VAR(mut_slice, var) \
+    thsn_mut_slice_write(&mut_slice, THSN_SLICE_FROM_VAR(var))
+
+#define THSN_SLICE_READ_VAR(slice, var) \
+    thsn_slice_read(&slice, THSN_MUT_SLICE_FROM_VAR(var))
 
 inline ThsnSlice thsn_slice_make_empty() {
     return (ThsnSlice){.data = NULL, .size = 0};
@@ -25,15 +30,17 @@ inline const char* thsn_slice_end(ThsnSlice slice) {
     return slice.data + slice.size;
 }
 
+inline ThsnSlice thsn_slice_from_mut_slice(ThsnMutSlice mut_slice) {
+    return thsn_slice_make(mut_slice.data, mut_slice.size);
+}
+
 inline ThsnResult thsn_slice_from_c_str(const char* data,
-                                        ThsnSlice* /*out*/ result_slice) {
+                                        ThsnSlice* result_slice) {
     BAIL_ON_NULL_INPUT(data);
     BAIL_ON_NULL_INPUT(result_slice);
     *result_slice = (ThsnSlice){.data = data, .size = strlen(data)};
     return THSN_RESULT_SUCCESS;
 }
-
-#define THSN_SLICE_FROM_VAR(v) thsn_slice_make((const char*)&(v), sizeof(v))
 
 inline ThsnResult thsn_slice_at_offset(ThsnSlice base_slice, size_t offset,
                                        size_t min_size,
@@ -47,7 +54,8 @@ inline ThsnResult thsn_slice_at_offset(ThsnSlice base_slice, size_t offset,
     return THSN_RESULT_SUCCESS;
 }
 
-inline ThsnResult thsn_slice_truncate(ThsnSlice* slice, size_t exact_size) {
+inline ThsnResult thsn_slice_truncate(ThsnSlice* /*mut*/ slice,
+                                      size_t exact_size) {
     BAIL_ON_NULL_INPUT(slice);
     if (exact_size > slice->size) {
         return THSN_RESULT_INPUT_ERROR;
@@ -58,24 +66,22 @@ inline ThsnResult thsn_slice_truncate(ThsnSlice* slice, size_t exact_size) {
 
 inline bool thsn_slice_is_empty(ThsnSlice slice) { return slice.size == 0; }
 
-inline void thsn_slice_advance_unsafe(ThsnSlice* /*in/out*/ slice,
-                                      size_t step) {
+inline void thsn_slice_advance_unsafe(ThsnSlice* /*mut*/ slice, size_t step) {
     slice->data += step;
     slice->size -= step;
 }
 
-inline void thsn_slice_rewind_unsafe(ThsnSlice* /*in/out*/ slice, size_t step) {
+inline void thsn_slice_rewind_unsafe(ThsnSlice* /*mut*/ slice, size_t step) {
     slice->data -= step;
     slice->size += step;
 }
 
-inline char thsn_slice_advance_char_unsafe(ThsnSlice* /*in/out*/ slice) {
+inline char thsn_slice_advance_char_unsafe(ThsnSlice* /*mut*/ slice) {
     --slice->size;
     return *slice->data++;
 }
 
-inline bool thsn_slice_try_consume_char(ThsnSlice* /*in/out*/ slice,
-                                        char* /*out*/ c) {
+inline bool thsn_slice_try_consume_char(ThsnSlice* /*mut*/ slice, char* c) {
     BAIL_ON_NULL_INPUT(slice);
     BAIL_ON_NULL_INPUT(c);
     if (thsn_slice_is_empty(*slice)) {
@@ -93,9 +99,7 @@ inline ThsnMutSlice thsn_mut_slice_make_empty() {
     return (ThsnMutSlice){.data = NULL, .size = 0};
 }
 
-#define THSN_MUT_SLICE_FROM_VAR(v) thsn_mut_slice_make((char*)&(v), sizeof(v))
-
-inline ThsnResult thsn_mut_slice_write(ThsnMutSlice* /*in/out*/ mut_slice,
+inline ThsnResult thsn_mut_slice_write(ThsnMutSlice* /*mut*/ mut_slice,
                                        ThsnSlice data_slice) {
     BAIL_ON_NULL_INPUT(mut_slice);
 
@@ -125,9 +129,6 @@ inline ThsnResult thsn_mut_slice_at_offset(
     return THSN_RESULT_SUCCESS;
 }
 
-#define THSN_MUT_SLICE_WRITE_VAR(mut_slice, var) \
-    thsn_mut_slice_write(&mut_slice, THSN_SLICE_FROM_VAR(var))
-
 inline ThsnResult thsn_slice_read(ThsnSlice* data_slice,
                                   ThsnMutSlice mut_slice) {
     BAIL_ON_NULL_INPUT(data_slice);
@@ -141,8 +142,5 @@ inline ThsnResult thsn_slice_read(ThsnSlice* data_slice,
     data_slice->size -= mut_slice.size;
     return THSN_RESULT_SUCCESS;
 }
-
-#define THSN_SLICE_READ_VAR(slice, var) \
-    thsn_slice_read(&slice, THSN_MUT_SLICE_FROM_VAR(var))
 
 #endif

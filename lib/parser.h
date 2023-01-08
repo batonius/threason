@@ -1,9 +1,9 @@
 #ifndef THSN_PARSER_H
 #define THSN_PARSER_H
 
+#include "tags.h"
 #include "threason.h"
 #include "tokenizer.h"
-#include "vector.h"
 
 typedef enum {
     THSN_PARSER_STATE_VALUE,
@@ -22,22 +22,61 @@ typedef struct {
     ThsnVector result_vector;
 } ThsnParserContext;
 
-ThsnResult thsn_parser_context_init(ThsnParserContext* parser_context);
+ThsnResult thsn_parser_parse_next_token(
+    ThsnParserContext* /*mut*/ parser_context, ThsnToken token,
+    ThsnSlice token_slice, bool* /*out*/ finished);
 
-ThsnResult thsn_parser_context_finish(
+inline ThsnResult thsn_parser_context_init(
+    ThsnParserContext* /*out*/ parser_context) {
+    BAIL_ON_NULL_INPUT(parser_context);
+    parser_context->state = THSN_PARSER_STATE_VALUE;
+    BAIL_ON_ERROR(thsn_vector_allocate(&parser_context->stack, 1024));
+    BAIL_ON_ERROR(thsn_vector_allocate(&parser_context->result_vector, 1024));
+    return THSN_RESULT_SUCCESS;
+}
+
+inline ThsnResult thsn_parser_context_finish(
     ThsnParserContext* /*in*/ parser_context,
-    ThsnOwningMutSlice* /*out*/ parsing_result);
+    ThsnOwningMutSlice* /*out*/ parsing_result) {
+    BAIL_ON_NULL_INPUT(parser_context);
+    BAIL_ON_NULL_INPUT(parsing_result);
+    thsn_vector_free(&parser_context->stack);
+    if (parsing_result == NULL) {
+        thsn_vector_free(&parser_context->result_vector);
+    } else {
+        *parsing_result =
+            thsn_vector_as_mut_slice(parser_context->result_vector);
+    }
+    return THSN_RESULT_SUCCESS;
+}
 
-ThsnResult thsn_parser_parse_next_token(ThsnParserContext* parser_context,
-                                        ThsnToken token, ThsnSlice token_slice,
-                                        bool* finished);
+inline ThsnResult thsn_parser_add_value_handle(
+    ThsnParserContext* /*mut*/ parser_context, ThsnValueHandle value_handle) {
+    BAIL_ON_NULL_INPUT(parser_context);
+    if (parser_context->state != THSN_PARSER_STATE_VALUE) {
+        return THSN_RESULT_INPUT_ERROR;
+    }
+    BAIL_ON_ERROR(thsn_vector_store_value_handle(&parser_context->result_vector,
+                                                 value_handle));
+    BAIL_ON_ERROR(
+        THSN_VECTOR_POP_VAR(parser_context->stack, parser_context->state));
+    return THSN_RESULT_SUCCESS;
+}
 
-ThsnResult thsn_parser_add_value_handle(ThsnParserContext* parser_context,
-                                        ThsnValueHandle value_handle);
+inline ThsnResult thsn_parser_reset_state(
+    ThsnParserContext* /*mut*/ parser_context) {
+    BAIL_ON_NULL_INPUT(parser_context);
+    parser_context->state = THSN_PARSER_STATE_VALUE;
+    return THSN_RESULT_SUCCESS;
+}
 
-ThsnResult thsn_parser_reset_state(ThsnParserContext* parser_context);
-
-ThsnResult thsn_parser_next_value_offset(ThsnParserContext* parser_context,
-                                         size_t* next_offset);
+inline ThsnResult thsn_parser_next_value_offset(
+    const ThsnParserContext* /*in*/ parser_context,
+    size_t* /*out*/ next_offset) {
+    BAIL_ON_NULL_INPUT(parser_context);
+    BAIL_ON_NULL_INPUT(next_offset);
+    *next_offset = thsn_vector_current_offset(parser_context->result_vector);
+    return THSN_RESULT_SUCCESS;
+}
 
 #endif

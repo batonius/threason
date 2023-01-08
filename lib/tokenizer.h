@@ -22,7 +22,7 @@ typedef enum {
     THSN_TOKEN_CLOSED_BRACE,
 } ThsnToken;
 
-ThsnResult thsn_next_token(ThsnSlice* /*in/out*/ buffer_slice,
+ThsnResult thsn_next_token(ThsnSlice* /*mut*/ buffer_slice,
                            ThsnSlice* /*out*/ token_slice,
                            ThsnToken* /*out*/ token);
 

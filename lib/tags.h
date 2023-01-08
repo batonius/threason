@@ -21,7 +21,6 @@ typedef enum {
 } ThsnTagType;
 
 typedef unsigned char ThsnTagSize;
-
 typedef unsigned char ThsnTag;
 
 #define THSN_TAG_SIZE_FALSE 0
@@ -45,7 +44,7 @@ inline ThsnTagSize thsn_tag_size(ThsnTag tag) {
     return (ThsnTagSize)(tag & 0x0f);
 }
 
-inline ThsnResult thsn_vector_store_tagged_value(ThsnVector* /*in/out*/ vector,
+inline ThsnResult thsn_vector_store_tagged_value(ThsnVector* /*mut*/ vector,
                                                  ThsnTag tag,
                                                  ThsnSlice value_slice) {
     BAIL_ON_NULL_INPUT(vector);
@@ -57,12 +56,12 @@ inline ThsnResult thsn_vector_store_tagged_value(ThsnVector* /*in/out*/ vector,
     return THSN_RESULT_SUCCESS;
 }
 
-inline ThsnResult thsn_vector_store_null(ThsnVector* /*in/out*/ vector) {
+inline ThsnResult thsn_vector_store_null(ThsnVector* /*mut*/ vector) {
     return thsn_vector_store_tagged_value(
         vector, thsn_tag_make(THSN_TAG_NULL, 0), thsn_slice_make_empty());
 }
 
-inline ThsnResult thsn_vector_store_bool(ThsnVector* /*in/out*/ vector,
+inline ThsnResult thsn_vector_store_bool(ThsnVector* /*mut*/ vector,
                                          bool value) {
     return thsn_vector_store_tagged_value(
         vector,
@@ -71,14 +70,14 @@ inline ThsnResult thsn_vector_store_bool(ThsnVector* /*in/out*/ vector,
         thsn_slice_make_empty());
 }
 
-inline ThsnResult thsn_vector_store_double(ThsnVector* /*in/out*/ vector,
+inline ThsnResult thsn_vector_store_double(ThsnVector* /*mut*/ vector,
                                            double value) {
     return thsn_vector_store_tagged_value(
         vector, thsn_tag_make(THSN_TAG_DOUBLE, THSN_TAG_SIZE_F64),
         THSN_SLICE_FROM_VAR(value));
 }
 
-inline ThsnResult thsn_vector_store_int(ThsnVector* /*in/out*/ vector,
+inline ThsnResult thsn_vector_store_int(ThsnVector* /*mut*/ vector,
                                         long long value) {
     if (value == 0) {
         return thsn_vector_store_tagged_value(
@@ -108,14 +107,14 @@ inline ThsnResult thsn_vector_store_int(ThsnVector* /*in/out*/ vector,
         THSN_SLICE_FROM_VAR(value));
 }
 
-inline ThsnResult thsn_vector_store_value_handle(ThsnVector* /*in/out*/ vector,
+inline ThsnResult thsn_vector_store_value_handle(ThsnVector* /*mut*/ vector,
                                                  ThsnValueHandle value_handle) {
     return thsn_vector_store_tagged_value(
         vector, thsn_tag_make(THSN_TAG_VALUE_HANDLE, THSN_TAG_SIZE_ZERO),
         THSN_SLICE_FROM_VAR(value_handle));
 }
 
-inline ThsnResult thsn_vector_store_string(ThsnVector* /*in/out*/ vector,
+inline ThsnResult thsn_vector_store_string(ThsnVector* /*mut*/ vector,
                                            ThsnSlice string_slice) {
     if (string_slice.size <= THSN_TAG_SIZE_MAX) {
         return thsn_vector_store_tagged_value(
@@ -126,41 +125,6 @@ inline ThsnResult thsn_vector_store_string(ThsnVector* /*in/out*/ vector,
             vector, thsn_tag_make(THSN_TAG_REF_STRING, THSN_TAG_SIZE_INBOUND),
             THSN_SLICE_FROM_VAR(string_slice));
     }
-}
-
-inline ThsnResult thsn_slice_read_string(ThsnSlice stored_string_slice,
-                                         ThsnSlice* /*out*/ string_slice,
-                                         size_t* /*out*/ stored_length) {
-    BAIL_ON_NULL_INPUT(string_slice);
-    char key_str_tag;
-    if (!thsn_slice_try_consume_char(&stored_string_slice, &key_str_tag)) {
-        return THSN_RESULT_INPUT_ERROR;
-    }
-    *string_slice = thsn_slice_make_empty();
-    switch (thsn_tag_type(key_str_tag)) {
-        case THSN_TAG_REF_STRING:
-            if (thsn_tag_size(key_str_tag) != THSN_TAG_SIZE_INBOUND) {
-                return THSN_RESULT_INPUT_ERROR;
-            }
-            BAIL_ON_ERROR(
-                THSN_SLICE_READ_VAR(stored_string_slice, *string_slice));
-            if (stored_length != NULL) {
-                *stored_length = sizeof(ThsnTag) + sizeof(ThsnSlice);
-            }
-            break;
-        case THSN_TAG_SMALL_STRING: {
-            size_t key_str_size = thsn_tag_size(key_str_tag);
-            *string_slice = stored_string_slice;
-            BAIL_ON_ERROR(thsn_slice_truncate(string_slice, key_str_size));
-            if (stored_length != NULL) {
-                *stored_length = sizeof(ThsnTag) + key_str_size;
-            }
-            break;
-        }
-        default:
-            return THSN_RESULT_INPUT_ERROR;
-    }
-    return THSN_RESULT_SUCCESS;
 }
 
 #endif

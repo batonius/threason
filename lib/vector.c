@@ -10,25 +10,25 @@ bool thsn_vector_is_empty(ThsnVector vector);
 
 ThsnSlice thsn_vector_as_slice(ThsnVector vector);
 
-ThsnResult thsn_vector_allocate(ThsnVector* /*out*/ vector,
-                                size_t prealloc_size);
+ThsnMutSlice thsn_vector_as_mut_slice(ThsnVector vector);
 
-ThsnResult thsn_vector_free(ThsnVector* /*in/out*/ vector);
+ThsnResult thsn_vector_allocate(ThsnVector* vector, size_t prealloc_size);
 
-ThsnResult thsn_vector_grow(ThsnVector* /*in/out*/ vector, size_t data_size,
-                            ThsnMutSlice* /*out*/ data_mut_slice);
+ThsnResult thsn_vector_free(ThsnVector* vector);
 
-ThsnResult thsn_vector_shrink(ThsnVector* /*in/out*/ vector, size_t shrink_size,
-                              ThsnSlice* /*out*/ data_slice);
+ThsnResult thsn_vector_grow(ThsnVector* vector, size_t data_size,
+                            ThsnMutSlice* data_mut_slice);
+
+ThsnResult thsn_vector_shrink(ThsnVector* vector, size_t shrink_size,
+                              ThsnSlice* data_slice);
 
 ThsnResult thsn_vector_slice_at_offset(ThsnVector vector, size_t offset,
-                                       size_t size, ThsnSlice* /*out*/ slice);
+                                       size_t size, ThsnSlice* slice);
 
 ThsnResult thsn_vector_mut_slice_at_offset(ThsnVector vector, size_t offset,
                                            size_t size,
-                                           ThsnMutSlice* /*out*/ mut_slice);
+                                           ThsnMutSlice* mut_slice);
 
-ThsnResult thsn_vector_push(ThsnVector* /*in/out*/ vector, ThsnSlice slice);
+ThsnResult thsn_vector_push(ThsnVector* vector, ThsnSlice slice);
 
-ThsnResult thsn_vector_pop(ThsnVector* /*in/out*/ vector,
-                           ThsnMutSlice mut_slice);
+ThsnResult thsn_vector_pop(ThsnVector* vector, ThsnMutSlice mut_slice);

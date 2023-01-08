@@ -34,6 +34,11 @@ ifdef ASAN
 	LDFLAGS+= -fsanitize=address
 endif
 
+ifdef TSAN
+	CFLAGS+= -fsanitize=thread
+	LDFLAGS+= -fsanitize=thread
+endif
+
 ifdef UBSAN
 	CFLAGS+= -fsanitize=undefined
 	LDFLAGS+= -fsanitize=undefined
