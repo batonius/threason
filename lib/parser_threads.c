@@ -389,7 +389,6 @@ ThsnResult thsn_parse_thread_per_chunk(ThsnSlice* /*mut*/ json_str_slice,
     if (json_str_slice->size / 32 < threads_count) {
         threads_count = json_str_slice->size / 32;
     }
-    ThsnVector threads = thsn_vector_make_empty();
     ThsnThreadContext* thread_contexts = aligned_alloc(
         _Alignof(ThsnThreadContext), sizeof(ThsnThreadContext) * threads_count);
     thread_contexts[0] = (ThsnThreadContext){0};
@@ -404,6 +403,7 @@ ThsnResult thsn_parse_thread_per_chunk(ThsnSlice* /*mut*/ json_str_slice,
                   error_cleanup);
     fprintf(stderr, "Thread 0: buffer size %zu\n", current_offset);
     for (size_t i = 1; i < threads_count; ++i) {
+        /* TODO detach threads */
         thread_contexts[i] = (ThsnThreadContext){0};
         thread_contexts[i].chunk_no = i;
         const size_t buffer_left = json_str_slice->size - current_offset;
@@ -422,7 +422,7 @@ ThsnResult thsn_parse_thread_per_chunk(ThsnSlice* /*mut*/ json_str_slice,
                       error_cleanup);
         thrd_t thread;
         thrd_create(&thread, thsn_preparse_thread, &thread_contexts[i]);
-        GOTO_ON_ERROR(THSN_VECTOR_PUSH_VAR(threads, thread), error_cleanup);
+        thrd_detach(thread);
         current_offset += subbuffer_size;
     }
     ThsnOwningMutSlice parse_result;
@@ -431,15 +431,6 @@ ThsnResult thsn_parse_thread_per_chunk(ThsnSlice* /*mut*/ json_str_slice,
                                                    sizeof(ThsnThreadContext) *
                                                        threads_count)),
                   error_cleanup);
-    /* TODO: process failure */
-    /* Wait for all threads */
-    ThsnSlice threads_slice = thsn_vector_as_slice(threads);
-    while (!thsn_slice_is_empty(threads_slice)) {
-        thrd_t thread;
-        GOTO_ON_ERROR(THSN_SLICE_READ_VAR(threads_slice, thread),
-                      error_cleanup);
-        thrd_join(thread, NULL);
-    }
     /* Fill in results */
     parsed_json->chunks[0] = parse_result;
     for (size_t i = 1; i < parsed_json->chunks_count; ++i) {
@@ -448,7 +439,7 @@ ThsnResult thsn_parse_thread_per_chunk(ThsnSlice* /*mut*/ json_str_slice,
                 thread_contexts[i]
                     .parsing_results[THSN_PREPARSE_STARTS_IN_STRING]
                     .parse_result;
-            free((void*)thread_contexts[i]
+            free(thread_contexts[i]
                      .parsing_results[THSN_PREPARSE_STARTS_NOT_IN_STRING]
                      .parse_result.data);
         } else {
@@ -456,7 +447,7 @@ ThsnResult thsn_parse_thread_per_chunk(ThsnSlice* /*mut*/ json_str_slice,
                 thread_contexts[i]
                     .parsing_results[THSN_PREPARSE_STARTS_NOT_IN_STRING]
                     .parse_result;
-            free((void*)thread_contexts[i]
+            free(thread_contexts[i]
                      .parsing_results[THSN_PREPARSE_STARTS_IN_STRING]
                      .parse_result.data);
         }
@@ -467,11 +458,9 @@ ThsnResult thsn_parse_thread_per_chunk(ThsnSlice* /*mut*/ json_str_slice,
                  .parsing_results[THSN_PREPARSE_STARTS_NOT_IN_STRING]
                  .pp_table.data);
     }
-    thsn_vector_free(&threads);
     free(thread_contexts);
     return THSN_RESULT_SUCCESS;
 error_cleanup:
-    thsn_vector_free(&threads);
     free(thread_contexts);
     return THSN_RESULT_INPUT_ERROR;
 }
