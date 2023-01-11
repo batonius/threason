@@ -164,7 +164,7 @@ int main(int argc, char** argv) {
 
     if (parsing_result != THSN_RESULT_SUCCESS) {
         fprintf(stderr, "Can't parse input string\n");
-        return 1;
+        goto error_cleanup;
     }
     fprintf(stderr, "Parse result size: ");
     for (size_t i = 0; i < parsed_json->chunks_count; ++i) {

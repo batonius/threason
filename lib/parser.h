@@ -37,9 +37,8 @@ inline ThsnResult thsn_parser_context_init(
 
 inline ThsnResult thsn_parser_context_finish(
     ThsnParserContext* /*in*/ parser_context,
-    ThsnOwningMutSlice* /*out*/ parsing_result) {
+    ThsnOwningMutSlice* /*maybe out*/ parsing_result) {
     BAIL_ON_NULL_INPUT(parser_context);
-    BAIL_ON_NULL_INPUT(parsing_result);
     thsn_vector_free(&parser_context->stack);
     if (parsing_result == NULL) {
         thsn_vector_free(&parser_context->result_vector);

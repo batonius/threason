@@ -10,8 +10,8 @@ typedef struct {
 } ThsnPreparsedValue;
 
 typedef enum {
-    THSN_PREPARSE_STARTS_NOT_IN_STRING = 0,
-    THSN_PREPARSE_STARTS_IN_STRING = 1
+    THSN_PP_STARTS_NOT_IN_STRING = 0,
+    THSN_PP_STARTS_IN_STRING = 1
 } ThsnPreparseScenario;
 
 typedef struct {
@@ -44,6 +44,25 @@ static ThsnPreparsedValue thsn_pp_value_make_empty() {
 static bool thsn_pp_value_is_empty(const ThsnPreparsedValue* /*in*/ pp_value) {
     BAIL_ON_NULL_INPUT(pp_value);
     return thsn_slice_is_empty(pp_value->inbuffer_slice);
+}
+
+static void thsn_pp_wait_for_completion(volatile atomic_bool* completed) {
+#ifdef METRICS
+    size_t yield_count = 0;
+#endif
+    while (true) {
+        if (atomic_load_explicit(completed, memory_order_acquire)) {
+            break;
+        } else {
+            thrd_yield();
+#ifdef METRICS
+            ++yield_count;
+#endif
+        }
+    }
+#ifdef METRICS
+    fprintf(stderr, "Yelded %zu times\n", yield_count);
+#endif
 }
 
 static ThsnResult thsn_pp_iter_init(ThsnPreparseIterator* /*mut*/ pp_iter,
@@ -91,28 +110,11 @@ static ThsnResult thsn_pp_iter_advance_to_char(
         }
     }
     ThsnPreparseScenario results_offset =
-        in_string ? THSN_PREPARSE_STARTS_IN_STRING
-                  : THSN_PREPARSE_STARTS_NOT_IN_STRING;
+        in_string ? THSN_PP_STARTS_IN_STRING : THSN_PP_STARTS_NOT_IN_STRING;
     // We have new current_thread_conext here, wait for it
-#ifdef METRICS
-    size_t yield_count = 0;
-#endif
-    while (true) {
-        if (atomic_load_explicit(&pp_iter->current_thread_context
-                                      ->parsing_results[results_offset]
-                                      .completed,
-                                 memory_order_acquire)) {
-            break;
-        } else {
-            thrd_yield();
-#ifdef METRICS
-            ++yield_count;
-#endif
-        }
-    }
-#ifdef METRICS
-    fprintf(stderr, "Yelded %zu times\n", yield_count);
-#endif
+    thsn_pp_wait_for_completion(
+        &pp_iter->current_thread_context->parsing_results[results_offset]
+             .completed);
     pp_iter->current_thread_context->pp_scenario = results_offset;
     if (pp_iter->current_thread_context->parsing_results[results_offset]
             .failed) {
@@ -275,7 +277,7 @@ error_cleanup:
 
 static int thsn_preparse_thread(void* /*in*/ user_data) {
     if (user_data == NULL) {
-        /* TODO: report failure */
+        /* Oh well */
         return 0;
     }
 
@@ -285,29 +287,27 @@ static int thsn_preparse_thread(void* /*in*/ user_data) {
     thsn_advance_after_end_of_string(&subbuffer_slice);
     if (thsn_preparse_buffer(
             subbuffer_slice,
-            &thread_context->parsing_results[THSN_PREPARSE_STARTS_IN_STRING]
+            &thread_context->parsing_results[THSN_PP_STARTS_IN_STRING]
                  .parse_result,
-            &thread_context->parsing_results[THSN_PREPARSE_STARTS_IN_STRING]
+            &thread_context->parsing_results[THSN_PP_STARTS_IN_STRING]
                  .pp_table) != THSN_RESULT_SUCCESS) {
-        thread_context->parsing_results[THSN_PREPARSE_STARTS_IN_STRING].failed =
-            true;
+        thread_context->parsing_results[THSN_PP_STARTS_IN_STRING].failed = true;
     }
     atomic_store_explicit(
-        &thread_context->parsing_results[THSN_PREPARSE_STARTS_IN_STRING]
-             .completed,
+        &thread_context->parsing_results[THSN_PP_STARTS_IN_STRING].completed,
         true, memory_order_release);
 
     if (thsn_preparse_buffer(
             thread_context->subbuffer_slice,
-            &thread_context->parsing_results[THSN_PREPARSE_STARTS_NOT_IN_STRING]
+            &thread_context->parsing_results[THSN_PP_STARTS_NOT_IN_STRING]
                  .parse_result,
-            &thread_context->parsing_results[THSN_PREPARSE_STARTS_NOT_IN_STRING]
+            &thread_context->parsing_results[THSN_PP_STARTS_NOT_IN_STRING]
                  .pp_table) != THSN_RESULT_SUCCESS) {
-        thread_context->parsing_results[THSN_PREPARSE_STARTS_NOT_IN_STRING]
-            .failed = true;
+        thread_context->parsing_results[THSN_PP_STARTS_NOT_IN_STRING].failed =
+            true;
     }
     atomic_store_explicit(
-        &thread_context->parsing_results[THSN_PREPARSE_STARTS_NOT_IN_STRING]
+        &thread_context->parsing_results[THSN_PP_STARTS_NOT_IN_STRING]
              .completed,
         true, memory_order_release);
 
@@ -386,12 +386,12 @@ ThsnResult thsn_parse_thread_per_chunk(ThsnSlice* /*mut*/ json_str_slice,
     BAIL_ON_NULL_INPUT(parsed_json);
     BAIL_WITH_INPUT_ERROR_UNLESS(parsed_json->chunks_count >= 1);
     size_t threads_count = parsed_json->chunks_count;
+    size_t threads_created = 0;
     if (json_str_slice->size / 32 < threads_count) {
         threads_count = json_str_slice->size / 32;
     }
-    ThsnThreadContext* thread_contexts = aligned_alloc(
-        _Alignof(ThsnThreadContext), sizeof(ThsnThreadContext) * threads_count);
-    thread_contexts[0] = (ThsnThreadContext){0};
+    ThsnThreadContext* thread_contexts =
+        calloc(1, sizeof(ThsnThreadContext) * threads_count);
     size_t subbuffer_size = json_str_slice->size / threads_count;
     size_t current_offset =
         json_str_slice->size - subbuffer_size * (threads_count - 1);
@@ -403,7 +403,6 @@ ThsnResult thsn_parse_thread_per_chunk(ThsnSlice* /*mut*/ json_str_slice,
                   error_cleanup);
     fprintf(stderr, "Thread 0: buffer size %zu\n", current_offset);
     for (size_t i = 1; i < threads_count; ++i) {
-        /* TODO detach threads */
         thread_contexts[i] = (ThsnThreadContext){0};
         thread_contexts[i].chunk_no = i;
         const size_t buffer_left = json_str_slice->size - current_offset;
@@ -421,8 +420,14 @@ ThsnResult thsn_parse_thread_per_chunk(ThsnSlice* /*mut*/ json_str_slice,
                                           subbuffer_size),
                       error_cleanup);
         thrd_t thread;
-        thrd_create(&thread, thsn_preparse_thread, &thread_contexts[i]);
-        thrd_detach(thread);
+        if (thrd_create(&thread, thsn_preparse_thread, &thread_contexts[i]) !=
+            thrd_success) {
+            goto error_cleanup;
+        }
+        ++threads_created;
+        if (thrd_detach(thread) != thrd_success) {
+            goto error_cleanup;
+        }
         current_offset += subbuffer_size;
     }
     ThsnOwningMutSlice parse_result;
@@ -434,33 +439,66 @@ ThsnResult thsn_parse_thread_per_chunk(ThsnSlice* /*mut*/ json_str_slice,
     /* Fill in results */
     parsed_json->chunks[0] = parse_result;
     for (size_t i = 1; i < parsed_json->chunks_count; ++i) {
-        if (thread_contexts[i].pp_scenario == THSN_PREPARSE_STARTS_IN_STRING) {
+        thsn_pp_wait_for_completion(
+            &thread_contexts[i]
+                 .parsing_results[THSN_PP_STARTS_NOT_IN_STRING]
+                 .completed);
+        thsn_pp_wait_for_completion(
+            &thread_contexts[i]
+                 .parsing_results[THSN_PP_STARTS_IN_STRING]
+                 .completed);
+        if (thread_contexts[i].pp_scenario == THSN_PP_STARTS_IN_STRING) {
             parsed_json->chunks[i] =
                 thread_contexts[i]
-                    .parsing_results[THSN_PREPARSE_STARTS_IN_STRING]
+                    .parsing_results[THSN_PP_STARTS_IN_STRING]
                     .parse_result;
             free(thread_contexts[i]
-                     .parsing_results[THSN_PREPARSE_STARTS_NOT_IN_STRING]
+                     .parsing_results[THSN_PP_STARTS_NOT_IN_STRING]
                      .parse_result.data);
         } else {
             parsed_json->chunks[i] =
                 thread_contexts[i]
-                    .parsing_results[THSN_PREPARSE_STARTS_NOT_IN_STRING]
+                    .parsing_results[THSN_PP_STARTS_NOT_IN_STRING]
                     .parse_result;
             free(thread_contexts[i]
-                     .parsing_results[THSN_PREPARSE_STARTS_IN_STRING]
+                     .parsing_results[THSN_PP_STARTS_IN_STRING]
                      .parse_result.data);
         }
         free((void*)thread_contexts[i]
-                 .parsing_results[THSN_PREPARSE_STARTS_IN_STRING]
+                 .parsing_results[THSN_PP_STARTS_IN_STRING]
                  .pp_table.data);
         free((void*)thread_contexts[i]
-                 .parsing_results[THSN_PREPARSE_STARTS_NOT_IN_STRING]
+                 .parsing_results[THSN_PP_STARTS_NOT_IN_STRING]
                  .pp_table.data);
     }
     free(thread_contexts);
     return THSN_RESULT_SUCCESS;
 error_cleanup:
+    for (size_t i = 1; i < threads_created + 1; ++i) {
+        /* The main thread can fail before the other threads finish,
+           so make sure they did. */
+        thsn_pp_wait_for_completion(
+            &thread_contexts[i]
+                 .parsing_results[THSN_PP_STARTS_NOT_IN_STRING]
+                 .completed);
+        /* free(0) is a NO-OP */
+        free(thread_contexts[i]
+                 .parsing_results[THSN_PP_STARTS_NOT_IN_STRING]
+                 .parse_result.data);
+        free((void*)thread_contexts[i]
+                 .parsing_results[THSN_PP_STARTS_NOT_IN_STRING]
+                 .pp_table.data);
+        thsn_pp_wait_for_completion(
+            &thread_contexts[i]
+                 .parsing_results[THSN_PP_STARTS_IN_STRING]
+                 .completed);
+        free(thread_contexts[i]
+                 .parsing_results[THSN_PP_STARTS_IN_STRING]
+                 .parse_result.data);
+        free((void*)thread_contexts[i]
+                 .parsing_results[THSN_PP_STARTS_IN_STRING]
+                 .pp_table.data);
+    }
     free(thread_contexts);
     return THSN_RESULT_INPUT_ERROR;
 }
