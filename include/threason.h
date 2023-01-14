@@ -112,21 +112,16 @@ typedef struct {
                                           void* user_data);
 } ThsnVisitorVTable;
 
-/* TODO: combine allocation with parsing */
-
-/*! Allocate space for parsing result */
-extern ThsnResult thsn_document_allocate(ThsnDocument** /*out*/ document,
-                                         uint8_t chunks_count);
-
 /*! Free parsing result */
 extern ThsnResult thsn_document_free(ThsnDocument** /*in*/ document);
 
 /*! Parse JSON string into JSON tree. */
 extern ThsnResult thsn_document_parse(ThsnSlice* /*mut*/ json_str_slice,
-                                      ThsnDocument* /*out*/ document);
+                                      ThsnDocument** /*out*/ document);
 
 extern ThsnResult thsn_document_parse_multithreaded(
-    ThsnSlice* /*mut*/ json_str_slice, ThsnDocument* /*out*/ document);
+    ThsnSlice* /*mut*/ json_str_slice, ThsnDocument** /*out*/ document,
+    size_t threads_count);
 
 /*! Enumerate JSON tree using function from vtable */
 extern ThsnResult thsn_document_visit(ThsnDocument* /*mut*/ document,
@@ -178,7 +173,7 @@ extern ThsnResult thsn_document_read_object(
     ThsnDocument* /*mut*/ document, ThsnValueHandle value_handle,
     ThsnValueObjectTable* /*out*/ object_table);
 
-extern ThsnResult thsn_value_read_object_sorted(
+extern ThsnResult thsn_document_read_object_sorted(
     ThsnDocument* /*mut*/ document, ThsnValueHandle value_handle,
     ThsnValueObjectTable* /*out*/ object_table);
 

@@ -40,32 +40,32 @@ typedef struct {
         ? THSN_VECTOR_POP_2_VARS((vector), (var2), (var3))       \
         : THSN_RESULT_INPUT_ERROR
 
-inline ThsnVector thsn_vector_make_empty() {
+static inline ThsnVector thsn_vector_make_empty() {
     return (ThsnVector){.buffer = NULL, .capacity = 0, .offset = 0};
 }
 
-inline size_t thsn_vector_space_left(ThsnVector vector) {
+static inline size_t thsn_vector_space_left(ThsnVector vector) {
     return vector.capacity - vector.offset;
 }
 
-inline size_t thsn_vector_current_offset(ThsnVector vector) {
+static inline size_t thsn_vector_current_offset(ThsnVector vector) {
     return vector.offset;
 }
 
-inline bool thsn_vector_is_empty(ThsnVector vector) {
+static inline bool thsn_vector_is_empty(ThsnVector vector) {
     return vector.offset == 0;
 }
 
-inline ThsnSlice thsn_vector_as_slice(ThsnVector vector) {
+static inline ThsnSlice thsn_vector_as_slice(ThsnVector vector) {
     return thsn_slice_make(vector.buffer, vector.offset);
 }
 
-inline ThsnMutSlice thsn_vector_as_mut_slice(ThsnVector vector) {
+static inline ThsnMutSlice thsn_vector_as_mut_slice(ThsnVector vector) {
     return thsn_mut_slice_make(vector.buffer, vector.offset);
 }
 
-inline ThsnResult thsn_vector_allocate(ThsnVector* vector,
-                                       size_t prealloc_size) {
+static inline ThsnResult thsn_vector_allocate(ThsnVector* vector,
+                                              size_t prealloc_size) {
     BAIL_ON_NULL_INPUT(vector);
     vector->buffer = malloc(prealloc_size);
     BAIL_ON_ALLOC_FAILURE(vector->buffer);
@@ -74,7 +74,7 @@ inline ThsnResult thsn_vector_allocate(ThsnVector* vector,
     return THSN_RESULT_SUCCESS;
 }
 
-inline ThsnResult thsn_vector_free(ThsnVector* vector) {
+static inline ThsnResult thsn_vector_free(ThsnVector* vector) {
     BAIL_ON_NULL_INPUT(vector);
     if (vector->buffer != NULL) {
         free(vector->buffer);
@@ -86,8 +86,9 @@ inline ThsnResult thsn_vector_free(ThsnVector* vector) {
 }
 
 /* Invalidates all the pointers into the vector */
-inline ThsnResult thsn_vector_grow(ThsnVector* /*mut*/ vector, size_t data_size,
-                                   ThsnMutSlice* /*maybe out*/ data_mut_slice) {
+static inline ThsnResult thsn_vector_grow(
+    ThsnVector* /*mut*/ vector, size_t data_size,
+    ThsnMutSlice* /*maybe out*/ data_mut_slice) {
     BAIL_ON_NULL_INPUT(vector);
     const size_t allocated_space_left = thsn_vector_space_left(*vector);
     if (allocated_space_left < data_size) {
@@ -112,9 +113,9 @@ inline ThsnResult thsn_vector_grow(ThsnVector* /*mut*/ vector, size_t data_size,
 }
 
 /* Never deallocates */
-inline ThsnResult thsn_vector_shrink(ThsnVector* /*mut*/ vector,
-                                     size_t shrink_size,
-                                     ThsnSlice* /*maybe out*/ data_slice) {
+static inline ThsnResult thsn_vector_shrink(
+    ThsnVector* /*mut*/ vector, size_t shrink_size,
+    ThsnSlice* /*maybe out*/ data_slice) {
     BAIL_ON_NULL_INPUT(vector);
     if (vector->offset < shrink_size) {
         return THSN_RESULT_INPUT_ERROR;
@@ -127,9 +128,9 @@ inline ThsnResult thsn_vector_shrink(ThsnVector* /*mut*/ vector,
     return THSN_RESULT_SUCCESS;
 }
 
-inline ThsnResult thsn_vector_slice_at_offset(ThsnVector vector, size_t offset,
-                                              size_t size,
-                                              ThsnSlice* /*out*/ slice) {
+static inline ThsnResult thsn_vector_slice_at_offset(ThsnVector vector,
+                                                     size_t offset, size_t size,
+                                                     ThsnSlice* /*out*/ slice) {
     BAIL_ON_NULL_INPUT(slice);
     /* It's ok to read up to `capacity`, for example the data we just "popped"
      * by decreasing `offset`. */
@@ -140,7 +141,7 @@ inline ThsnResult thsn_vector_slice_at_offset(ThsnVector vector, size_t offset,
     return THSN_RESULT_SUCCESS;
 }
 
-inline ThsnResult thsn_vector_mut_slice_at_offset(
+static inline ThsnResult thsn_vector_mut_slice_at_offset(
     ThsnVector vector, size_t offset, size_t size,
     ThsnMutSlice* /*out*/ mut_slice) {
     BAIL_ON_NULL_INPUT(mut_slice);
@@ -152,8 +153,8 @@ inline ThsnResult thsn_vector_mut_slice_at_offset(
     return THSN_RESULT_SUCCESS;
 }
 
-inline ThsnResult thsn_vector_push(ThsnVector* /*mut*/ vector,
-                                   ThsnSlice slice) {
+static inline ThsnResult thsn_vector_push(ThsnVector* /*mut*/ vector,
+                                          ThsnSlice slice) {
     BAIL_ON_NULL_INPUT(vector);
     ThsnMutSlice data_mut_slice;
     BAIL_ON_ERROR(thsn_vector_grow(vector, slice.size, &data_mut_slice));
@@ -161,8 +162,8 @@ inline ThsnResult thsn_vector_push(ThsnVector* /*mut*/ vector,
     return THSN_RESULT_SUCCESS;
 }
 
-inline ThsnResult thsn_vector_pop(ThsnVector* /*mut*/ vector,
-                                  ThsnMutSlice mut_slice) {
+static inline ThsnResult thsn_vector_pop(ThsnVector* /*mut*/ vector,
+                                         ThsnMutSlice mut_slice) {
     BAIL_ON_NULL_INPUT(vector);
     ThsnSlice data_slice;
     BAIL_ON_ERROR(thsn_vector_shrink(vector, mut_slice.size, &data_slice));

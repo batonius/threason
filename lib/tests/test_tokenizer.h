@@ -37,10 +37,10 @@ TEST(valid_tokens) {
     };
 
     for (size_t i = 0; i < sizeof(test_values) / sizeof(test_values[0]); ++i) {
-        ThsnSlice input_slice;
+        ThsnSlice input_slice = thsn_slice_make_empty();
         ASSERT_SUCCESS(
             thsn_slice_from_c_str(test_values[i].input, &input_slice));
-        ThsnSlice token_slice;
+        ThsnSlice token_slice = thsn_slice_make_empty();
         ThsnToken token;
         ASSERT_EQ(thsn_next_token(&input_slice, &token_slice, &token),
                   THSN_RESULT_SUCCESS);
@@ -94,9 +94,9 @@ TEST(invalid_tokens) {
     };
     for (size_t i = 0; i < sizeof(invalid_tokens) / sizeof(invalid_tokens[0]);
          ++i) {
-        ThsnSlice input_slice;
+        ThsnSlice input_slice = thsn_slice_make_empty();
         ASSERT_SUCCESS(thsn_slice_from_c_str(invalid_tokens[i], &input_slice));
-        ThsnSlice token_slice;
+        ThsnSlice token_slice = thsn_slice_make_empty();
         ThsnToken token;
         ASSERT_EQ(thsn_next_token(&input_slice, &token_slice, &token),
                   THSN_RESULT_INPUT_ERROR);

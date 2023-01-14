@@ -37,10 +37,10 @@ typedef enum {
         }                                                               \
     } while (0)
 
-ThsnResult thsn_document_visit(ThsnDocument* /*mut*/ parsed_json,
+ThsnResult thsn_document_visit(ThsnDocument* /*mut*/ document,
                                const ThsnVisitorVTable* /*in*/ vtable,
                                void* /*in*/ user_data) {
-    BAIL_ON_NULL_INPUT(parsed_json);
+    BAIL_ON_NULL_INPUT(document);
     BAIL_ON_NULL_INPUT(vtable);
     ThsnVisitorContext context = {
         .key = thsn_slice_make_empty(),
@@ -57,8 +57,8 @@ ThsnResult thsn_document_visit(ThsnDocument* /*mut*/ parsed_json,
 
     do {
         ThsnValueType value_type = THSN_VALUE_NULL;
-        GOTO_ON_ERROR(thsn_document_value_type(
-                          parsed_json, current_value_handle, &value_type),
+        GOTO_ON_ERROR(thsn_document_value_type(document, current_value_handle,
+                                               &value_type),
                       error_cleanup);
         switch (value_type) {
             case THSN_VALUE_NULL:
@@ -67,7 +67,7 @@ ThsnResult thsn_document_visit(ThsnDocument* /*mut*/ parsed_json,
             case THSN_VALUE_BOOL: {
                 bool value;
                 GOTO_ON_ERROR(thsn_document_read_bool(
-                                  parsed_json, current_value_handle, &value),
+                                  document, current_value_handle, &value),
                               error_cleanup);
                 CALL_VISITOR3(vtable->visit_bool, &context, user_data, value);
                 break;
@@ -75,7 +75,7 @@ ThsnResult thsn_document_visit(ThsnDocument* /*mut*/ parsed_json,
             case THSN_VALUE_NUMBER: {
                 double value;
                 GOTO_ON_ERROR(thsn_document_read_number(
-                                  parsed_json, current_value_handle, &value),
+                                  document, current_value_handle, &value),
                               error_cleanup);
                 CALL_VISITOR3(vtable->visit_number, &context, user_data, value);
                 break;
@@ -83,7 +83,7 @@ ThsnResult thsn_document_visit(ThsnDocument* /*mut*/ parsed_json,
             case THSN_VALUE_STRING: {
                 ThsnSlice string_slice;
                 GOTO_ON_ERROR(
-                    thsn_document_read_string(parsed_json, current_value_handle,
+                    thsn_document_read_string(document, current_value_handle,
                                               &string_slice),
                     error_cleanup);
                 CALL_VISITOR3(vtable->visit_string, &context, user_data,
@@ -96,10 +96,9 @@ ThsnResult thsn_document_visit(ThsnDocument* /*mut*/ parsed_json,
                     break;
                 }
                 ThsnValueArrayTable array_table;
-                GOTO_ON_ERROR(
-                    thsn_document_read_array(parsed_json, current_value_handle,
-                                             &array_table),
-                    error_cleanup);
+                GOTO_ON_ERROR(thsn_document_read_array(
+                                  document, current_value_handle, &array_table),
+                              error_cleanup);
                 GOTO_ON_ERROR(THSN_VECTOR_PUSH_3_VARS(stack, array_table,
                                                       context, VISIT_TAG_ARRAY),
                               error_cleanup);
@@ -112,7 +111,7 @@ ThsnResult thsn_document_visit(ThsnDocument* /*mut*/ parsed_json,
                 }
                 ThsnValueObjectTable object_table;
                 GOTO_ON_ERROR(
-                    thsn_document_read_object(parsed_json, current_value_handle,
+                    thsn_document_read_object(document, current_value_handle,
                                               &object_table),
                     error_cleanup);
                 GOTO_ON_ERROR(
@@ -145,7 +144,7 @@ ThsnResult thsn_document_visit(ThsnDocument* /*mut*/ parsed_json,
                     }
                     GOTO_ON_ERROR(
                         thsn_document_array_consume_element(
-                            parsed_json, &array_table, &current_value_handle),
+                            document, &array_table, &current_value_handle),
                         error_cleanup);
                     GOTO_ON_ERROR(
                         THSN_VECTOR_PUSH_3_VARS(stack, array_table, context,
@@ -170,7 +169,7 @@ ThsnResult thsn_document_visit(ThsnDocument* /*mut*/ parsed_json,
                     }
                     ThsnSlice key_slice;
                     GOTO_ON_ERROR(thsn_document_object_consume_element(
-                                      parsed_json, &object_table, &key_slice,
+                                      document, &object_table, &key_slice,
                                       &current_value_handle),
                                   error_cleanup);
                     GOTO_ON_ERROR(

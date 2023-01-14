@@ -9,16 +9,15 @@ TEST(indexes_object_by_key) {
     const char* object_str = "{ \"abc\": 12, \"xyz\":34, \"000\": 56}";
     ThsnSlice object_str_slice;
     ASSERT_SUCCESS(thsn_slice_from_c_str(object_str, &object_str_slice));
-    ThsnDocument* parsed_json;
-    ASSERT_SUCCESS(thsn_document_allocate(&parsed_json, 1));
-    ASSERT_SUCCESS(thsn_document_parse(&object_str_slice, parsed_json));
+    ThsnDocument* document;
+    ASSERT_SUCCESS(thsn_document_parse(&object_str_slice, &document));
     ThsnValueType value_type = THSN_VALUE_NULL;
-    ASSERT_SUCCESS(thsn_document_value_type(
-        parsed_json, THSN_VALUE_HANDLE_FIRST, &value_type));
+    ASSERT_SUCCESS(thsn_document_value_type(document, THSN_VALUE_HANDLE_FIRST,
+                                            &value_type));
     ASSERT_EQ(value_type, THSN_VALUE_OBJECT);
     ThsnValueObjectTable object_table;
-    ASSERT_SUCCESS(thsn_value_read_object_sorted(
-        parsed_json, THSN_VALUE_HANDLE_FIRST, &object_table));
+    ASSERT_SUCCESS(thsn_document_read_object_sorted(
+        document, THSN_VALUE_HANDLE_FIRST, &object_table));
 
     struct {
         const char* key;
@@ -31,17 +30,17 @@ TEST(indexes_object_by_key) {
         ThsnSlice key_slice;
         ASSERT_SUCCESS(thsn_slice_from_c_str(existing_keys[i].key, &key_slice));
         ThsnValueHandle element_handle = THSN_VALUE_HANDLE_NOT_FOUND;
-        ASSERT_SUCCESS(thsn_document_object_index(parsed_json, object_table,
+        ASSERT_SUCCESS(thsn_document_object_index(document, object_table,
                                                   key_slice, &element_handle));
         // TODO: fix not found detection
         ASSERT_NEQ(element_handle.segment_no, (uint8_t)-1);
         ThsnValueType element_type = THSN_VALUE_NULL;
-        ASSERT_SUCCESS(thsn_document_value_type(parsed_json, element_handle,
-                                                &element_type));
+        ASSERT_SUCCESS(
+            thsn_document_value_type(document, element_handle, &element_type));
         ASSERT_EQ(element_type, THSN_VALUE_NUMBER);
         double number = 0.0;
         ASSERT_SUCCESS(
-            thsn_document_read_number(parsed_json, element_handle, &number));
+            thsn_document_read_number(document, element_handle, &number));
         ASSERT_EQ(number, existing_keys[i].expected);
     }
 
@@ -51,11 +50,11 @@ TEST(indexes_object_by_key) {
         ThsnSlice key_slice;
         ASSERT_SUCCESS(thsn_slice_from_c_str(non_existing_keys[i], &key_slice));
         ThsnValueHandle element_handle;
-        ASSERT_SUCCESS(thsn_document_object_index(parsed_json, object_table,
+        ASSERT_SUCCESS(thsn_document_object_index(document, object_table,
                                                   key_slice, &element_handle));
         ASSERT_EQ(element_handle.segment_no, (uint8_t)-1);
     }
-    thsn_document_free(&parsed_json);
+    thsn_document_free(&document);
 }
 
 /* clang-format off */

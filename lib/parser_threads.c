@@ -380,12 +380,12 @@ error_cleanup:
     return THSN_RESULT_INPUT_ERROR;
 }
 
-ThsnResult thsn_document_parse_multithreaded(
-    ThsnSlice* /*mut*/ json_str_slice, ThsnDocument* /*out*/ parsed_json) {
+ThsnResult thsn_document_parse_multithreaded(ThsnSlice* /*mut*/ json_str_slice,
+                                             ThsnDocument** /*out*/ document,
+                                             size_t threads_count) {
     BAIL_ON_NULL_INPUT(json_str_slice);
-    BAIL_ON_NULL_INPUT(parsed_json);
-    BAIL_WITH_INPUT_ERROR_UNLESS(parsed_json->segment_count >= 1);
-    size_t threads_count = parsed_json->segment_count;
+    BAIL_ON_NULL_INPUT(document);
+    BAIL_ON_ERROR(thsn_document_allocate(document, threads_count));
     size_t threads_created = 0;
     if (json_str_slice->size / 32 < threads_count) {
         threads_count = json_str_slice->size / 32;
@@ -437,8 +437,8 @@ ThsnResult thsn_document_parse_multithreaded(
                                                        threads_count)),
                   error_cleanup);
     /* Fill in results */
-    parsed_json->segments[0] = parse_result;
-    for (size_t i = 1; i < parsed_json->segment_count; ++i) {
+    (*document)->segments[0] = parse_result;
+    for (size_t i = 1; i < (*document)->segment_count; ++i) {
         thsn_pp_wait_for_completion(
             &thread_contexts[i]
                  .parsing_results[THSN_PP_STARTS_NOT_IN_STRING]
@@ -448,7 +448,7 @@ ThsnResult thsn_document_parse_multithreaded(
                  .parsing_results[THSN_PP_STARTS_IN_STRING]
                  .completed);
         if (thread_contexts[i].pp_scenario == THSN_PP_STARTS_IN_STRING) {
-            parsed_json->segments[i] =
+            (*document)->segments[i] =
                 thread_contexts[i]
                     .parsing_results[THSN_PP_STARTS_IN_STRING]
                     .parse_result;
@@ -456,7 +456,7 @@ ThsnResult thsn_document_parse_multithreaded(
                      .parsing_results[THSN_PP_STARTS_NOT_IN_STRING]
                      .parse_result.data);
         } else {
-            parsed_json->segments[i] =
+            (*document)->segments[i] =
                 thread_contexts[i]
                     .parsing_results[THSN_PP_STARTS_NOT_IN_STRING]
                     .parse_result;

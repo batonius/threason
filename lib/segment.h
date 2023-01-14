@@ -35,21 +35,20 @@ typedef ThsnMutSlice ThsnSegmentMutSlice;
 #define THSN_TAG_SIZE_INBOUND 1
 #define THSN_TAG_SIZE_INBOUND_SORTED 2
 
-inline ThsnTag thsn_tag_make(ThsnTagType type, ThsnTagSize size) {
+static inline ThsnTag thsn_tag_make(ThsnTagType type, ThsnTagSize size) {
     return (ThsnTag)((type << 4) | (size & 0x0f));
 }
 
-inline ThsnTagType thsn_tag_type(ThsnTag tag) {
+static inline ThsnTagType thsn_tag_type(ThsnTag tag) {
     return (ThsnTagType)(tag >> 4);
 }
 
-inline ThsnTagSize thsn_tag_size(ThsnTag tag) {
+static inline ThsnTagSize thsn_tag_size(ThsnTag tag) {
     return (ThsnTagSize)(tag & 0x0f);
 }
 
-inline ThsnResult thsn_segment_store_tagged_value(ThsnSegment* /*mut*/ segment,
-                                                  ThsnTag tag,
-                                                  ThsnSlice value_slice) {
+static inline ThsnResult thsn_segment_store_tagged_value(
+    ThsnSegment* /*mut*/ segment, ThsnTag tag, ThsnSlice value_slice) {
     BAIL_ON_NULL_INPUT(segment);
     ThsnMutSlice allocated_data;
     BAIL_ON_ERROR(thsn_vector_grow(segment, sizeof(tag) + value_slice.size,
@@ -59,13 +58,13 @@ inline ThsnResult thsn_segment_store_tagged_value(ThsnSegment* /*mut*/ segment,
     return THSN_RESULT_SUCCESS;
 }
 
-inline ThsnResult thsn_segment_store_null(ThsnSegment* /*mut*/ segment) {
+static inline ThsnResult thsn_segment_store_null(ThsnSegment* /*mut*/ segment) {
     return thsn_segment_store_tagged_value(
         segment, thsn_tag_make(THSN_TAG_NULL, 0), thsn_slice_make_empty());
 }
 
-inline ThsnResult thsn_segment_store_bool(ThsnSegment* /*mut*/ segment,
-                                          bool value) {
+static inline ThsnResult thsn_segment_store_bool(ThsnSegment* /*mut*/ segment,
+                                                 bool value) {
     return thsn_segment_store_tagged_value(
         segment,
         thsn_tag_make(THSN_TAG_BOOL,
@@ -73,15 +72,15 @@ inline ThsnResult thsn_segment_store_bool(ThsnSegment* /*mut*/ segment,
         thsn_slice_make_empty());
 }
 
-inline ThsnResult thsn_segment_store_double(ThsnSegment* /*mut*/ segment,
-                                            double value) {
+static inline ThsnResult thsn_segment_store_double(ThsnSegment* /*mut*/ segment,
+                                                   double value) {
     return thsn_segment_store_tagged_value(
         segment, thsn_tag_make(THSN_TAG_DOUBLE, THSN_TAG_SIZE_F64),
         THSN_SLICE_FROM_VAR(value));
 }
 
-inline ThsnResult thsn_segment_store_int(ThsnSegment* /*mut*/ segment,
-                                         long long value) {
+static inline ThsnResult thsn_segment_store_int(ThsnSegment* /*mut*/ segment,
+                                                long long value) {
     if (value == 0) {
         return thsn_segment_store_tagged_value(
             segment, thsn_tag_make(THSN_TAG_INT, THSN_TAG_SIZE_ZERO),
@@ -110,15 +109,15 @@ inline ThsnResult thsn_segment_store_int(ThsnSegment* /*mut*/ segment,
         THSN_SLICE_FROM_VAR(value));
 }
 
-inline ThsnResult thsn_segment_store_value_handle(
+static inline ThsnResult thsn_segment_store_value_handle(
     ThsnSegment* /*mut*/ segment, ThsnValueHandle value_handle) {
     return thsn_segment_store_tagged_value(
         segment, thsn_tag_make(THSN_TAG_VALUE_HANDLE, THSN_TAG_SIZE_ZERO),
         THSN_SLICE_FROM_VAR(value_handle));
 }
 
-inline ThsnResult thsn_segment_store_string(ThsnSegment* /*mut*/ segment,
-                                            ThsnSlice string_slice) {
+static inline ThsnResult thsn_segment_store_string(ThsnSegment* /*mut*/ segment,
+                                                   ThsnSlice string_slice) {
     if (string_slice.size <= THSN_TAG_SIZE_MAX) {
         return thsn_segment_store_tagged_value(
             segment, thsn_tag_make(THSN_TAG_SMALL_STRING, string_slice.size),
@@ -130,7 +129,60 @@ inline ThsnResult thsn_segment_store_string(ThsnSegment* /*mut*/ segment,
     }
 }
 
-inline ThsnResult thsn_segment_read_string_from_slice(
+static inline ThsnResult thsn_segment_store_composite_header(
+    ThsnSegment* /*mut*/ segment, ThsnTag tag, bool reserve_sorted_table_offset,
+    size_t* /*out*/ header_offset) {
+    BAIL_ON_NULL_INPUT(segment);
+    BAIL_ON_NULL_INPUT(header_offset);
+    const size_t composite_header_size =
+        sizeof(ThsnTag) +
+        (reserve_sorted_table_offset ? 3 : 2) * sizeof(size_t);
+    size_t composite_header_offset = thsn_vector_current_offset(*segment);
+    ThsnMutSlice composite_header_mut_slice;
+    BAIL_ON_ERROR(thsn_vector_grow(segment, composite_header_size,
+                                   &composite_header_mut_slice));
+    BAIL_ON_ERROR(THSN_MUT_SLICE_WRITE_VAR(composite_header_mut_slice, tag));
+    composite_header_offset += sizeof(tag);
+    *header_offset = composite_header_offset;
+    return THSN_RESULT_SUCCESS;
+}
+
+static inline ThsnResult thsn_segment_store_composite_elements_table(
+    ThsnSegment* /*mut*/ segment, size_t composite_header_offset,
+    ThsnSlice elements_table, bool reserve_sorted_table) {
+    BAIL_ON_NULL_INPUT(segment);
+    ThsnMutSlice elements_table_dst;
+    const size_t composite_elements_count =
+        elements_table.size / sizeof(size_t);
+    const size_t elements_offsets_table_offset =
+        thsn_vector_current_offset(*segment);
+    BAIL_ON_ERROR(
+        thsn_vector_grow(segment, elements_table.size, &elements_table_dst));
+    BAIL_ON_ERROR(thsn_mut_slice_write(&elements_table_dst, elements_table));
+    size_t sorted_elements_offsets_table_offset =
+        thsn_vector_current_offset(*segment);
+    if (reserve_sorted_table) {
+        BAIL_ON_ERROR(thsn_vector_grow(segment, elements_table.size,
+                                       &elements_table_dst));
+        BAIL_ON_ERROR(
+            thsn_mut_slice_write(&elements_table_dst, elements_table));
+    }
+    ThsnMutSlice composite_header;
+    BAIL_ON_ERROR(thsn_vector_mut_slice_at_offset(
+        *segment, composite_header_offset,
+        sizeof(size_t) * (reserve_sorted_table ? 3 : 2), &composite_header));
+    BAIL_ON_ERROR(
+        THSN_MUT_SLICE_WRITE_VAR(composite_header, composite_elements_count));
+    BAIL_ON_ERROR(THSN_MUT_SLICE_WRITE_VAR(composite_header,
+                                           elements_offsets_table_offset));
+    if (reserve_sorted_table) {
+        BAIL_ON_ERROR(THSN_MUT_SLICE_WRITE_VAR(
+            composite_header, sorted_elements_offsets_table_offset));
+    }
+    return THSN_RESULT_SUCCESS;
+}
+
+static inline ThsnResult thsn_segment_read_string_from_slice(
     ThsnSlice slice, ThsnSlice* /*out*/ string_slice,
     size_t* /*maybe out*/ stored_length) {
     BAIL_ON_NULL_INPUT(string_slice);
@@ -164,7 +216,8 @@ inline ThsnResult thsn_segment_read_string_from_slice(
     return THSN_RESULT_SUCCESS;
 }
 
-inline int thsn_compare_kv_keys(const void* a, const void* b, void* data) {
+static inline int thsn_compare_kv_keys(const void* a, const void* b,
+                                       void* data) {
     size_t a_offset;
     size_t b_offset;
     memcpy(&a_offset, a, sizeof(size_t));
@@ -208,14 +261,14 @@ inline int thsn_compare_kv_keys(const void* a, const void* b, void* data) {
     }
 }
 
-inline ThsnResult thsn_segment_sort_elements_table(ThsnMutSlice elements_table,
-                                                   ThsnSlice result_slice) {
+static inline ThsnResult thsn_segment_sort_elements_table(
+    ThsnMutSlice elements_table, ThsnSlice result_slice) {
     qsort_r(elements_table.data, elements_table.size / sizeof(size_t),
             sizeof(size_t), thsn_compare_kv_keys, &result_slice);
     return THSN_RESULT_SUCCESS;
 }
 
-inline ThsnResult thsn_segment_read_tagged_value(
+static inline ThsnResult thsn_segment_read_tagged_value(
     ThsnSegmentSlice segment_slice, size_t offset, ThsnTag* /*out*/ value_tag,
     ThsnSlice* /*out*/ value_slice) {
     BAIL_ON_NULL_INPUT(value_tag);
@@ -226,8 +279,8 @@ inline ThsnResult thsn_segment_read_tagged_value(
     return THSN_RESULT_SUCCESS;
 }
 
-inline ThsnResult thsn_segment_update_tag(ThsnSegmentMutSlice segment_mut_slice,
-                                          size_t offset, ThsnTag tag) {
+static inline ThsnResult thsn_segment_update_tag(
+    ThsnSegmentMutSlice segment_mut_slice, size_t offset, ThsnTag tag) {
     ThsnMutSlice tag_mut_slice;
     BAIL_ON_ERROR(thsn_mut_slice_at_offset(segment_mut_slice, offset,
                                            sizeof(ThsnTag), &tag_mut_slice));
@@ -235,8 +288,9 @@ inline ThsnResult thsn_segment_update_tag(ThsnSegmentMutSlice segment_mut_slice,
     return THSN_RESULT_SUCCESS;
 }
 
-inline ThsnResult thsn_segment_read_bool(ThsnSegmentSlice segment_slice,
-                                         size_t offset, bool* /*out*/ value) {
+static inline ThsnResult thsn_segment_read_bool(ThsnSegmentSlice segment_slice,
+                                                size_t offset,
+                                                bool* /*out*/ value) {
     BAIL_ON_NULL_INPUT(value);
     ThsnTag value_tag;
     ThsnSlice value_slice;
@@ -261,9 +315,8 @@ inline ThsnResult thsn_segment_read_bool(ThsnSegmentSlice segment_slice,
     return THSN_RESULT_SUCCESS;
 }
 
-inline ThsnResult thsn_segment_read_number(ThsnSegmentSlice segment_slice,
-                                           size_t offset,
-                                           double* /*out*/ value) {
+static inline ThsnResult thsn_segment_read_number(
+    ThsnSegmentSlice segment_slice, size_t offset, double* /*out*/ value) {
     BAIL_ON_NULL_INPUT(value);
     ThsnTag value_tag;
     ThsnSlice value_slice;
@@ -320,7 +373,7 @@ inline ThsnResult thsn_segment_read_number(ThsnSegmentSlice segment_slice,
     return THSN_RESULT_SUCCESS;
 }
 
-inline ThsnResult thsn_segment_read_string_ex(
+static inline ThsnResult thsn_segment_read_string_ex(
     ThsnSegmentSlice segment_slice, size_t offset,
     ThsnSlice* /*out*/ string_slice, size_t* /*maybe out*/ consumed_size) {
     BAIL_ON_NULL_INPUT(string_slice);
@@ -331,11 +384,9 @@ inline ThsnResult thsn_segment_read_string_ex(
                                                consumed_size);
 }
 
-inline ThsnResult thsn_segment_read_composite(ThsnSegmentMutSlice segment_slice,
-                                              size_t offset,
-                                              ThsnTagType expected_type,
-                                              ThsnSlice* /*out*/ elements_table,
-                                              bool read_sorted_table) {
+static inline ThsnResult thsn_segment_read_composite(
+    ThsnSegmentMutSlice segment_slice, size_t offset, ThsnTagType expected_type,
+    ThsnSlice* /*out*/ elements_table, bool read_sorted_table) {
     BAIL_ON_NULL_INPUT(elements_table);
     ThsnTag value_tag;
     ThsnSlice value_slice;
@@ -382,7 +433,7 @@ inline ThsnResult thsn_segment_read_composite(ThsnSegmentMutSlice segment_slice,
     return THSN_RESULT_SUCCESS;
 }
 
-inline ThsnResult thsn_segment_composite_index_element_offset(
+static inline ThsnResult thsn_segment_composite_index_element_offset(
     ThsnSlice elements_table, size_t element_no,
     size_t* /*out*/ element_offset) {
     BAIL_ON_NULL_INPUT(element_offset);
@@ -394,7 +445,7 @@ inline ThsnResult thsn_segment_composite_index_element_offset(
     return THSN_RESULT_SUCCESS;
 }
 
-inline ThsnResult thsn_segment_composite_consume_element_offset(
+static inline ThsnResult thsn_segment_composite_consume_element_offset(
     ThsnSlice* /*mut*/ elements_table, size_t* /*out*/ element_offset) {
     BAIL_ON_NULL_INPUT(elements_table);
     BAIL_ON_NULL_INPUT(element_offset);
@@ -402,10 +453,9 @@ inline ThsnResult thsn_segment_composite_consume_element_offset(
     return THSN_RESULT_SUCCESS;
 }
 
-inline ThsnResult thsn_segment_object_read_kv(ThsnSegmentSlice segment_slice,
-                                              size_t offset,
-                                              ThsnSlice* /*out*/ key_slice,
-                                              size_t* /*out*/ element_offset) {
+static inline ThsnResult thsn_segment_object_read_kv(
+    ThsnSegmentSlice segment_slice, size_t offset, ThsnSlice* /*out*/ key_slice,
+    size_t* /*out*/ element_offset) {
     BAIL_ON_NULL_INPUT(key_slice);
     BAIL_ON_NULL_INPUT(element_offset);
     size_t key_size;
@@ -415,11 +465,9 @@ inline ThsnResult thsn_segment_object_read_kv(ThsnSegmentSlice segment_slice,
     return THSN_RESULT_SUCCESS;
 }
 
-inline ThsnResult thsn_segment_object_index(ThsnSegmentSlice segment_slice,
-                                            ThsnSlice sorted_elements_table,
-                                            ThsnSlice key_slice,
-                                            size_t* /*out*/ element_offset,
-                                            bool* /*out*/ found) {
+static inline ThsnResult thsn_segment_object_index(
+    ThsnSegmentSlice segment_slice, ThsnSlice sorted_elements_table,
+    ThsnSlice key_slice, size_t* /*out*/ element_offset, bool* /*out*/ found) {
     BAIL_ON_NULL_INPUT(element_offset);
     BAIL_ON_NULL_INPUT(found);
     ThsnSlice element_key_slice = thsn_slice_make_empty();

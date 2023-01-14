@@ -38,7 +38,7 @@ TEST(grows_vector) {
     ASSERT_SUCCESS(thsn_vector_allocate(&vector, 1024));
     ASSERT_SUCCESS(thsn_vector_grow(&vector, 1024, NULL));
     ASSERT_EQ(vector.offset, 1024);
-    ThsnMutSlice mut_slice;
+    ThsnMutSlice mut_slice = thsn_mut_slice_make(NULL, 0);
     ASSERT_SUCCESS(thsn_vector_grow(&vector, 1024, &mut_slice));
     ASSERT_EQ(vector.offset, 2048);
     ASSERT_EQ(mut_slice.size, 1024);

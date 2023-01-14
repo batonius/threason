@@ -175,7 +175,7 @@ ThsnResult thsn_document_read_object(
                                         object_table, false);
 }
 
-ThsnResult thsn_value_read_object_sorted(
+ThsnResult thsn_document_read_object_sorted(
     ThsnDocument* /*mut*/ document, ThsnValueHandle value_handle,
     ThsnValueObjectTable* /*out*/ sorted_object_table) {
     BAIL_ON_NULL_INPUT(document);
