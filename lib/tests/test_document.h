@@ -1,5 +1,5 @@
-#ifndef THSN_TEST_VALUE_H
-#define THSN_TEST_VALUE_H
+#ifndef THSN_TEST_DOCUMENT_H
+#define THSN_TEST_DOCUMENT_H
 
 #include "testing.h"
 #include "threason.h"
@@ -12,12 +12,12 @@ TEST(indexes_object_by_key) {
     ThsnDocument* document;
     ASSERT_SUCCESS(thsn_document_parse(&object_str_slice, &document));
     ThsnValueType value_type = THSN_VALUE_NULL;
-    ASSERT_SUCCESS(thsn_document_value_type(document, THSN_VALUE_HANDLE_FIRST,
+    ASSERT_SUCCESS(thsn_document_value_type(document, thsn_value_handle_first(),
                                             &value_type));
     ASSERT_EQ(value_type, THSN_VALUE_OBJECT);
     ThsnValueObjectTable object_table;
     ASSERT_SUCCESS(thsn_document_read_object_sorted(
-        document, THSN_VALUE_HANDLE_FIRST, &object_table));
+        document, thsn_value_handle_first(), &object_table));
 
     struct {
         const char* key;
@@ -29,11 +29,10 @@ TEST(indexes_object_by_key) {
          ++i) {
         ThsnSlice key_slice;
         ASSERT_SUCCESS(thsn_slice_from_c_str(existing_keys[i].key, &key_slice));
-        ThsnValueHandle element_handle = THSN_VALUE_HANDLE_NOT_FOUND;
+        ThsnValueHandle element_handle = thsn_value_handle_not_found();
         ASSERT_SUCCESS(thsn_document_object_index(document, object_table,
                                                   key_slice, &element_handle));
-        // TODO: fix not found detection
-        ASSERT_NEQ(element_handle.segment_no, (uint8_t)-1);
+        ASSERT_FALSE(thsn_value_handle_is_not_found(element_handle));
         ThsnValueType element_type = THSN_VALUE_NULL;
         ASSERT_SUCCESS(
             thsn_document_value_type(document, element_handle, &element_type));
@@ -52,13 +51,13 @@ TEST(indexes_object_by_key) {
         ThsnValueHandle element_handle;
         ASSERT_SUCCESS(thsn_document_object_index(document, object_table,
                                                   key_slice, &element_handle));
-        ASSERT_EQ(element_handle.segment_no, (uint8_t)-1);
+        ASSERT_TRUE(thsn_value_handle_is_not_found(element_handle));
     }
     thsn_document_free(&document);
 }
 
 /* clang-format off */
-TEST_SUITE(value)
+TEST_SUITE(document)
     indexes_object_by_key,
 END_TEST_SUITE()
 

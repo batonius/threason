@@ -45,14 +45,18 @@ typedef struct {
 } ThsnValueHandle;
 
 /*! The first value in the parsed document, the top level of the JSON tree. */
-#define THSN_VALUE_HANDLE_FIRST \
-    (ThsnValueHandle) { 0 }
+static inline ThsnValueHandle thsn_value_handle_first() {
+    return (ThsnValueHandle){0};
+}
 
-/*! Used in case the key wasn't found. */
-#define THSN_VALUE_HANDLE_NOT_FOUND \
-    (ThsnValueHandle) { .segment_no = -1, .offset = -1 }
+static inline ThsnValueHandle thsn_value_handle_not_found() {
+    return (ThsnValueHandle){.segment_no = UINT8_MAX, .offset = -1};
+}
 
-#define THSN_VALUE_HANDLE_IS_NOT_FOUND(v) ((v).segment_no == (uint8_t)-1)
+static inline bool thsn_value_handle_is_not_found(
+    ThsnValueHandle value_handle) {
+    return value_handle.segment_no == UINT8_MAX;
+}
 
 /*! Poor man's &[u8]. */
 typedef struct {

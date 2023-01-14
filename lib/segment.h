@@ -1,5 +1,5 @@
-#ifndef THSN_TAGS_H
-#define THSN_TAGS_H
+#ifndef THSN_SEGMENT_H
+#define THSN_SEGMENT_H
 
 #include <stdbool.h>
 

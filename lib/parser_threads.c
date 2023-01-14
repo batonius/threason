@@ -144,7 +144,7 @@ static ThsnResult thsn_pp_iter_find_value_at(
     BAIL_ON_NULL_INPUT(value_handle);
     BAIL_ON_NULL_INPUT(inbuffer_value_size);
 
-    *value_handle = THSN_VALUE_HANDLE_NOT_FOUND;
+    *value_handle = thsn_value_handle_not_found();
     *inbuffer_value_size = 0;
     BAIL_ON_ERROR(thsn_pp_iter_advance_to_char(pp_iter, point, false));
     if (thsn_pp_value_is_empty(&pp_iter->current_pp_value)) {
@@ -326,7 +326,7 @@ static ThsnResult thsn_main_thread(ThsnSlice* /*mut*/ buffer_slice,
     size_t total_skipped = 0;
 #endif
     while (!finished) {
-        ThsnValueHandle value_handle = THSN_VALUE_HANDLE_NOT_FOUND;
+        ThsnValueHandle value_handle = thsn_value_handle_not_found();
         size_t inbuffer_value_size = 0;
 
         GOTO_ON_ERROR(thsn_next_token(buffer_slice, &token_slice, &token),
@@ -347,7 +347,7 @@ static ThsnResult thsn_main_thread(ThsnSlice* /*mut*/ buffer_slice,
                 break;
         }
 
-        if (THSN_VALUE_HANDLE_IS_NOT_FOUND(value_handle)) {
+        if (thsn_value_handle_is_not_found(value_handle)) {
             GOTO_ON_ERROR(thsn_parser_parse_next_token(&parser_context, token,
                                                        token_slice, &finished),
                           error_cleanup);

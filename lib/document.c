@@ -289,7 +289,7 @@ ThsnResult thsn_document_object_index(const ThsnDocument* /*in*/ document,
         object_table.elements_table, key_slice, &element_offset, &found));
 
     if (!found) {
-        *element_handle = THSN_VALUE_HANDLE_NOT_FOUND;
+        *element_handle = thsn_value_handle_not_found();
     } else {
         *element_handle = (ThsnValueHandle){
             .segment_no = object_table.segment_no, .offset = element_offset};

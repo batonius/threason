@@ -84,9 +84,7 @@ static inline char thsn_slice_advance_char_unsafe(ThsnSlice* /*mut*/ slice) {
 
 static inline bool thsn_slice_try_consume_char(ThsnSlice* /*mut*/ slice,
                                                char* c) {
-    BAIL_ON_NULL_INPUT(slice);
-    BAIL_ON_NULL_INPUT(c);
-    if (thsn_slice_is_empty(*slice)) {
+    if (slice == NULL || c == NULL || thsn_slice_is_empty(*slice)) {
         return false;
     }
     *c = thsn_slice_advance_char_unsafe(slice);

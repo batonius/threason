@@ -52,7 +52,7 @@ ThsnResult thsn_document_visit(ThsnDocument* /*mut*/ document,
     ThsnVector stack = thsn_vector_make_empty();
     BAIL_ON_ERROR(thsn_vector_allocate(&stack, 1024 * 1024));
     bool skip = false;
-    ThsnValueHandle current_value_handle = THSN_VALUE_HANDLE_FIRST;
+    ThsnValueHandle current_value_handle = thsn_value_handle_first();
     bool done_visiting = false;
 
     do {
