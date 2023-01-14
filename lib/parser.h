@@ -1,7 +1,7 @@
 #ifndef THSN_PARSER_H
 #define THSN_PARSER_H
 
-#include "tags.h"
+#include "segment.h"
 #include "threason.h"
 #include "tokenizer.h"
 
@@ -55,8 +55,8 @@ inline ThsnResult thsn_parser_add_value_handle(
     if (parser_context->state != THSN_PARSER_STATE_VALUE) {
         return THSN_RESULT_INPUT_ERROR;
     }
-    BAIL_ON_ERROR(thsn_vector_store_value_handle(&parser_context->result_vector,
-                                                 value_handle));
+    BAIL_ON_ERROR(thsn_segment_store_value_handle(
+        &parser_context->result_vector, value_handle));
     BAIL_ON_ERROR(
         THSN_VECTOR_POP_VAR(parser_context->stack, parser_context->state));
     return THSN_RESULT_SUCCESS;

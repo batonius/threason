@@ -37,9 +37,9 @@ typedef enum {
         }                                                               \
     } while (0)
 
-ThsnResult thsn_visit(ThsnParsedJson* /*mut*/ parsed_json,
-                      const ThsnVisitorVTable* /*in*/ vtable,
-                      void* /*in*/ user_data) {
+ThsnResult thsn_document_visit(ThsnDocument* /*mut*/ parsed_json,
+                               const ThsnVisitorVTable* /*in*/ vtable,
+                               void* /*in*/ user_data) {
     BAIL_ON_NULL_INPUT(parsed_json);
     BAIL_ON_NULL_INPUT(vtable);
     ThsnVisitorContext context = {
@@ -57,16 +57,16 @@ ThsnResult thsn_visit(ThsnParsedJson* /*mut*/ parsed_json,
 
     do {
         ThsnValueType value_type = THSN_VALUE_NULL;
-        GOTO_ON_ERROR(
-            thsn_value_type(parsed_json, current_value_handle, &value_type),
-            error_cleanup);
+        GOTO_ON_ERROR(thsn_document_value_type(
+                          parsed_json, current_value_handle, &value_type),
+                      error_cleanup);
         switch (value_type) {
             case THSN_VALUE_NULL:
                 CALL_VISITOR2(vtable->visit_null, &context, user_data);
                 break;
             case THSN_VALUE_BOOL: {
                 bool value;
-                GOTO_ON_ERROR(thsn_value_read_bool(
+                GOTO_ON_ERROR(thsn_document_read_bool(
                                   parsed_json, current_value_handle, &value),
                               error_cleanup);
                 CALL_VISITOR3(vtable->visit_bool, &context, user_data, value);
@@ -74,7 +74,7 @@ ThsnResult thsn_visit(ThsnParsedJson* /*mut*/ parsed_json,
             }
             case THSN_VALUE_NUMBER: {
                 double value;
-                GOTO_ON_ERROR(thsn_value_read_number(
+                GOTO_ON_ERROR(thsn_document_read_number(
                                   parsed_json, current_value_handle, &value),
                               error_cleanup);
                 CALL_VISITOR3(vtable->visit_number, &context, user_data, value);
@@ -83,8 +83,8 @@ ThsnResult thsn_visit(ThsnParsedJson* /*mut*/ parsed_json,
             case THSN_VALUE_STRING: {
                 ThsnSlice string_slice;
                 GOTO_ON_ERROR(
-                    thsn_value_read_string(parsed_json, current_value_handle,
-                                           &string_slice),
+                    thsn_document_read_string(parsed_json, current_value_handle,
+                                              &string_slice),
                     error_cleanup);
                 CALL_VISITOR3(vtable->visit_string, &context, user_data,
                               string_slice);
@@ -97,8 +97,8 @@ ThsnResult thsn_visit(ThsnParsedJson* /*mut*/ parsed_json,
                 }
                 ThsnValueArrayTable array_table;
                 GOTO_ON_ERROR(
-                    thsn_value_read_array(parsed_json, current_value_handle,
-                                          &array_table),
+                    thsn_document_read_array(parsed_json, current_value_handle,
+                                             &array_table),
                     error_cleanup);
                 GOTO_ON_ERROR(THSN_VECTOR_PUSH_3_VARS(stack, array_table,
                                                       context, VISIT_TAG_ARRAY),
@@ -112,8 +112,8 @@ ThsnResult thsn_visit(ThsnParsedJson* /*mut*/ parsed_json,
                 }
                 ThsnValueObjectTable object_table;
                 GOTO_ON_ERROR(
-                    thsn_value_read_object(parsed_json, current_value_handle,
-                                           &object_table),
+                    thsn_document_read_object(parsed_json, current_value_handle,
+                                              &object_table),
                     error_cleanup);
                 GOTO_ON_ERROR(
                     THSN_VECTOR_PUSH_3_VARS(stack, object_table, context,
@@ -138,13 +138,13 @@ ThsnResult thsn_visit(ThsnParsedJson* /*mut*/ parsed_json,
                     GOTO_ON_ERROR(
                         THSN_VECTOR_POP_2_VARS(stack, context, array_table),
                         error_cleanup);
-                    if (thsn_value_array_length(array_table) == 0) {
+                    if (thsn_document_array_length(array_table) == 0) {
                         CALL_VISITOR2(vtable->visit_array_end, &context,
                                       user_data);
                         break;
                     }
                     GOTO_ON_ERROR(
-                        thsn_value_array_consume_element(
+                        thsn_document_array_consume_element(
                             parsed_json, &array_table, &current_value_handle),
                         error_cleanup);
                     GOTO_ON_ERROR(
@@ -153,7 +153,7 @@ ThsnResult thsn_visit(ThsnParsedJson* /*mut*/ parsed_json,
                         error_cleanup);
                     context.in_object = false;
                     context.in_array = true;
-                    context.last = thsn_value_array_length(array_table) == 0;
+                    context.last = thsn_document_array_length(array_table) == 0;
                     context.key = thsn_slice_make_empty();
                     found_offset = true;
                     break;
@@ -163,13 +163,13 @@ ThsnResult thsn_visit(ThsnParsedJson* /*mut*/ parsed_json,
                     GOTO_ON_ERROR(
                         THSN_VECTOR_POP_2_VARS(stack, context, object_table),
                         error_cleanup);
-                    if (thsn_value_object_length(object_table) == 0) {
+                    if (thsn_document_object_length(object_table) == 0) {
                         CALL_VISITOR2(vtable->visit_object_end, &context,
                                       user_data);
                         break;
                     }
                     ThsnSlice key_slice;
-                    GOTO_ON_ERROR(thsn_value_object_consume_element(
+                    GOTO_ON_ERROR(thsn_document_object_consume_element(
                                       parsed_json, &object_table, &key_slice,
                                       &current_value_handle),
                                   error_cleanup);
@@ -179,7 +179,8 @@ ThsnResult thsn_visit(ThsnParsedJson* /*mut*/ parsed_json,
                         error_cleanup);
 
                     context.in_array = false;
-                    context.last = thsn_value_object_length(object_table) == 0;
+                    context.last =
+                        thsn_document_object_length(object_table) == 0;
                     context.key = key_slice;
                     context.in_object = true;
                     found_offset = true;

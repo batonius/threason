@@ -134,9 +134,9 @@ int main(int argc, char** argv) {
     } while (true);
     fprintf(stderr, "Read %zu bytes.\n", json_str_len);
     ThsnSlice input_slice = {.data = json_str, .size = json_str_len};
-    ThsnParsedJson* parsed_json;
+    ThsnDocument* parsed_json;
 
-    if (thsn_parsed_json_allocate(&parsed_json, thread_count) !=
+    if (thsn_document_allocate(&parsed_json, thread_count) !=
         THSN_RESULT_SUCCESS) {
         fprintf(stderr, "Can't allocate_result\n");
         return 1;
@@ -147,9 +147,10 @@ int main(int argc, char** argv) {
     struct timespec start_time;
     clock_gettime(CLOCK_MONOTONIC, &start_time);
     if (thread_count == 1) {
-        parsing_result = thsn_parse_buffer(&input_slice, parsed_json);
+        parsing_result = thsn_document_parse(&input_slice, parsed_json);
     } else {
-        parsing_result = thsn_parse_thread_per_chunk(&input_slice, parsed_json);
+        parsing_result =
+            thsn_document_parse_multithreaded(&input_slice, parsed_json);
     }
     struct timespec end_time;
     clock_gettime(CLOCK_MONOTONIC, &end_time);
@@ -167,23 +168,23 @@ int main(int argc, char** argv) {
         goto error_cleanup;
     }
     fprintf(stderr, "Parse result size: ");
-    for (size_t i = 0; i < parsed_json->chunks_count; ++i) {
-        fprintf(stderr, "%zu, ", parsed_json->chunks[i].size);
+    for (size_t i = 0; i < parsed_json->segment_count; ++i) {
+        fprintf(stderr, "%zu, ", parsed_json->segments[i].size);
     }
     fprintf(stderr, "\n");
     size_t offset = 0;
-    if (thsn_visit(parsed_json, &visitor_vtable, (void*)&offset) !=
+    if (thsn_document_visit(parsed_json, &visitor_vtable, (void*)&offset) !=
         THSN_RESULT_SUCCESS) {
         fprintf(stderr, "\nCan't visit parse result\n");
         goto error_cleanup;
     }
     printf("\n");
-    thsn_parsed_json_free(&parsed_json);
+    thsn_document_free(&parsed_json);
     free(json_str);
     return 0;
 
 error_cleanup:
-    thsn_parsed_json_free(&parsed_json);
+    thsn_document_free(&parsed_json);
     free(json_str);
     return 1;
 }

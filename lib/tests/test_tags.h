@@ -3,13 +3,13 @@
 
 #include <string.h>
 
-#include "tags.h"
+#include "segment.h"
 #include "testing.h"
 
 TEST(stores_null) {
     ThsnVector vector = thsn_vector_make_empty();
     ASSERT_SUCCESS(thsn_vector_allocate(&vector, 1024));
-    ASSERT_SUCCESS(thsn_vector_store_null(&vector));
+    ASSERT_SUCCESS(thsn_segment_store_null(&vector));
     ASSERT_EQ(vector.offset, 1);
     ASSERT_EQ(vector.buffer[0],
               thsn_tag_make(THSN_TAG_NULL, THSN_TAG_SIZE_EMPTY));
@@ -19,10 +19,10 @@ TEST(stores_null) {
 TEST(stores_bools) {
     ThsnVector vector = thsn_vector_make_empty();
     ASSERT_SUCCESS(thsn_vector_allocate(&vector, 1024));
-    ASSERT_SUCCESS(thsn_vector_store_bool(&vector, true));
-    ASSERT_SUCCESS(thsn_vector_store_bool(&vector, false));
-    ASSERT_SUCCESS(thsn_vector_store_bool(&vector, false));
-    ASSERT_SUCCESS(thsn_vector_store_bool(&vector, true));
+    ASSERT_SUCCESS(thsn_segment_store_bool(&vector, true));
+    ASSERT_SUCCESS(thsn_segment_store_bool(&vector, false));
+    ASSERT_SUCCESS(thsn_segment_store_bool(&vector, false));
+    ASSERT_SUCCESS(thsn_segment_store_bool(&vector, true));
     ASSERT_EQ(vector.offset, 4);
     ASSERT_EQ(vector.buffer[0],
               thsn_tag_make(THSN_TAG_BOOL, THSN_TAG_SIZE_TRUE));
@@ -42,11 +42,11 @@ TEST(stores_ints) {
     int64_t d;
     ThsnVector vector = thsn_vector_make_empty();
     ASSERT_SUCCESS(thsn_vector_allocate(&vector, 1024));
-    ASSERT_SUCCESS(thsn_vector_store_int(&vector, 123));
-    ASSERT_SUCCESS(thsn_vector_store_int(&vector, 12345));
-    ASSERT_SUCCESS(thsn_vector_store_int(&vector, 1234567));
-    ASSERT_SUCCESS(thsn_vector_store_int(&vector, INT64_MAX));
-    ASSERT_SUCCESS(thsn_vector_store_int(&vector, 0));
+    ASSERT_SUCCESS(thsn_segment_store_int(&vector, 123));
+    ASSERT_SUCCESS(thsn_segment_store_int(&vector, 12345));
+    ASSERT_SUCCESS(thsn_segment_store_int(&vector, 1234567));
+    ASSERT_SUCCESS(thsn_segment_store_int(&vector, INT64_MAX));
+    ASSERT_SUCCESS(thsn_segment_store_int(&vector, 0));
     ASSERT_EQ(vector.offset, 5 + 1 + 2 + 4 + 8);
     ASSERT_EQ(vector.buffer[0], thsn_tag_make(THSN_TAG_INT, sizeof(int8_t)));
     memcpy(&a, vector.buffer + 1, sizeof(a));
@@ -75,8 +75,8 @@ TEST(stores_strings) {
     ASSERT_SUCCESS(thsn_slice_from_c_str(short_string, &short_string_slice));
     ASSERT_SUCCESS(thsn_slice_from_c_str(long_string, &long_string_slice));
     ASSERT_SUCCESS(thsn_vector_allocate(&vector, 1024));
-    ASSERT_SUCCESS(thsn_vector_store_string(&vector, short_string_slice));
-    ASSERT_SUCCESS(thsn_vector_store_string(&vector, long_string_slice));
+    ASSERT_SUCCESS(thsn_segment_store_string(&vector, short_string_slice));
+    ASSERT_SUCCESS(thsn_segment_store_string(&vector, long_string_slice));
     ASSERT_EQ(vector.buffer[0],
               thsn_tag_make(THSN_TAG_SMALL_STRING, short_string_slice.size));
     ASSERT_STRN_EQ(vector.buffer + 1, short_string, short_string_slice.size);

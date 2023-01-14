@@ -74,25 +74,26 @@ static ThsnResult thsn_parser_parse_value(
         case THSN_TOKEN_EOF:
             return THSN_RESULT_SUCCESS;
         case THSN_TOKEN_NULL:
-            return thsn_vector_store_null(&parser_context->result_vector);
+            return thsn_segment_store_null(&parser_context->result_vector);
         case THSN_TOKEN_TRUE:
-            return thsn_vector_store_bool(&parser_context->result_vector, true);
+            return thsn_segment_store_bool(&parser_context->result_vector,
+                                           true);
         case THSN_TOKEN_FALSE:
-            return thsn_vector_store_bool(&parser_context->result_vector,
-                                          false);
+            return thsn_segment_store_bool(&parser_context->result_vector,
+                                           false);
         case THSN_TOKEN_INT:
-            return thsn_vector_store_int(
+            return thsn_segment_store_int(
                 &parser_context->result_vector,
                 thsn_parser_atoll_checked(token_slice));
         case THSN_TOKEN_FLOAT: {
             double value;
             BAIL_ON_ERROR(thsn_parser_atod_checked(token_slice, &value));
-            return thsn_vector_store_double(&parser_context->result_vector,
-                                            value);
+            return thsn_segment_store_double(&parser_context->result_vector,
+                                             value);
         }
         case THSN_TOKEN_STRING:
-            return thsn_vector_store_string(&parser_context->result_vector,
-                                            token_slice);
+            return thsn_segment_store_string(&parser_context->result_vector,
+                                             token_slice);
         case THSN_TOKEN_OPEN_BRACKET:
             parser_context->state = THSN_PARSER_STATE_FIRST_ARRAY_ELEMENT;
             return THSN_RESULT_SUCCESS;
@@ -199,7 +200,7 @@ static ThsnResult thsn_parser_parse_first_array_element(
     BAIL_ON_NULL_INPUT(parser_context);
     if (token == THSN_TOKEN_CLOSED_BRACKET) {
         parser_context->state = THSN_PARSER_STATE_FINISH;
-        return thsn_vector_store_tagged_value(
+        return thsn_segment_store_tagged_value(
             &parser_context->result_vector,
             thsn_tag_make(THSN_TAG_ARRAY, THSN_TAG_SIZE_EMPTY),
             thsn_slice_make_empty());
@@ -242,7 +243,7 @@ static ThsnResult thsn_parser_parse_next_kv(
     }
     BAIL_ON_ERROR(thsn_parser_add_composite_element(parser_context));
     BAIL_ON_ERROR(
-        thsn_vector_store_string(&parser_context->result_vector, token_slice));
+        thsn_segment_store_string(&parser_context->result_vector, token_slice));
     parser_context->state = THSN_PARSER_STATE_KV_COLON;
     return THSN_RESULT_SUCCESS;
 }
@@ -253,7 +254,7 @@ static ThsnResult thsn_parser_parse_first_kv(
     BAIL_ON_NULL_INPUT(parser_context);
     if (token == THSN_TOKEN_CLOSED_BRACE) {
         parser_context->state = THSN_PARSER_STATE_FINISH;
-        return thsn_vector_store_tagged_value(
+        return thsn_segment_store_tagged_value(
             &parser_context->result_vector,
             thsn_tag_make(THSN_TAG_OBJECT, THSN_TAG_SIZE_EMPTY),
             thsn_slice_make_empty());
@@ -265,7 +266,7 @@ static ThsnResult thsn_parser_parse_first_kv(
         parser_context, thsn_tag_make(THSN_TAG_OBJECT, THSN_TAG_SIZE_INBOUND),
         true));
     BAIL_ON_ERROR(
-        thsn_vector_store_string(&parser_context->result_vector, token_slice));
+        thsn_segment_store_string(&parser_context->result_vector, token_slice));
     parser_context->state = THSN_PARSER_STATE_KV_COLON;
     return THSN_RESULT_SUCCESS;
 }
@@ -353,33 +354,33 @@ ThsnResult thsn_parser_parse_next_token(
     return THSN_RESULT_SUCCESS;
 }
 
-ThsnResult thsn_parsed_json_allocate(ThsnParsedJson** /*mut*/ parsed_json,
-                                     uint8_t chunks_count) {
+ThsnResult thsn_document_allocate(ThsnDocument** /*mut*/ parsed_json,
+                                  uint8_t chunks_count) {
     BAIL_ON_NULL_INPUT(parsed_json);
     *parsed_json =
-        calloc(1, sizeof(ThsnParsedJson) + sizeof(ThsnSlice) * chunks_count);
+        calloc(1, sizeof(ThsnDocument) + sizeof(ThsnSlice) * chunks_count);
     if (*parsed_json == NULL) {
         return THSN_RESULT_OUT_OF_MEMORY_ERROR;
     }
-    (*parsed_json)->chunks_count = chunks_count;
+    (*parsed_json)->segment_count = chunks_count;
     return THSN_RESULT_SUCCESS;
 }
 
-ThsnResult thsn_parsed_json_free(ThsnParsedJson** /*in*/ parsed_json) {
+ThsnResult thsn_document_free(ThsnDocument** /*in*/ parsed_json) {
     BAIL_ON_NULL_INPUT(parsed_json);
-    for (size_t i = 0; i < (*parsed_json)->chunks_count; ++i) {
-        free((*parsed_json)->chunks[i].data);
+    for (size_t i = 0; i < (*parsed_json)->segment_count; ++i) {
+        free((*parsed_json)->segments[i].data);
     }
     free(*parsed_json);
     *parsed_json = NULL;
     return THSN_RESULT_SUCCESS;
 }
 
-ThsnResult thsn_parse_buffer(ThsnSlice* /*mut*/ buffer_slice,
-                             ThsnParsedJson* /*out*/ parsed_json) {
+ThsnResult thsn_document_parse(ThsnSlice* /*mut*/ buffer_slice,
+                               ThsnDocument* /*out*/ parsed_json) {
     BAIL_ON_NULL_INPUT(buffer_slice);
     BAIL_ON_NULL_INPUT(parsed_json);
-    BAIL_WITH_INPUT_ERROR_UNLESS(parsed_json->chunks_count == 1);
+    BAIL_WITH_INPUT_ERROR_UNLESS(parsed_json->segment_count == 1);
     ThsnToken token;
     ThsnSlice token_slice;
     ThsnParserContext parser_context;
@@ -393,7 +394,7 @@ ThsnResult thsn_parse_buffer(ThsnSlice* /*mut*/ buffer_slice,
                       error_cleanup);
     }
     GOTO_ON_ERROR(
-        thsn_parser_context_finish(&parser_context, &parsed_json->chunks[0]),
+        thsn_parser_context_finish(&parser_context, &parsed_json->segments[0]),
         error_cleanup);
     return THSN_RESULT_SUCCESS;
 
