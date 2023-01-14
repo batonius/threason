@@ -64,36 +64,30 @@ static inline ThsnResult thsn_next_token(ThsnSlice* buffer_slice,
             *token = THSN_TOKEN_COLON;
             return THSN_RESULT_SUCCESS;
         case 'n':
-            if (buffer_slice->size >= 3 && buffer_slice->data[0] == 'u' &&
-                buffer_slice->data[1] == 'l' && buffer_slice->data[2] == 'l') {
-                *token = THSN_TOKEN_NULL;
-                token_slice->size = 4;
-                thsn_slice_advance_unsafe(buffer_slice, 3);
-                return THSN_RESULT_SUCCESS;
-            } else {
-                return THSN_RESULT_INPUT_ERROR;
-            }
+            BAIL_WITH_INPUT_ERROR_UNLESS(
+                buffer_slice->size >= 3 && buffer_slice->data[0] == 'u' &&
+                buffer_slice->data[1] == 'l' && buffer_slice->data[2] == 'l');
+            *token = THSN_TOKEN_NULL;
+            token_slice->size = 4;
+            thsn_slice_advance_unsafe(buffer_slice, 3);
+            return THSN_RESULT_SUCCESS;
         case 't':
-            if (buffer_slice->size >= 3 && buffer_slice->data[0] == 'r' &&
-                buffer_slice->data[1] == 'u' && buffer_slice->data[2] == 'e') {
-                *token = THSN_TOKEN_TRUE;
-                token_slice->size = 4;
-                thsn_slice_advance_unsafe(buffer_slice, 3);
-                return THSN_RESULT_SUCCESS;
-            } else {
-                return THSN_RESULT_INPUT_ERROR;
-            }
+            BAIL_WITH_INPUT_ERROR_UNLESS(
+                buffer_slice->size >= 3 && buffer_slice->data[0] == 'r' &&
+                buffer_slice->data[1] == 'u' && buffer_slice->data[2] == 'e');
+            *token = THSN_TOKEN_TRUE;
+            token_slice->size = 4;
+            thsn_slice_advance_unsafe(buffer_slice, 3);
+            return THSN_RESULT_SUCCESS;
         case 'f':
-            if (buffer_slice->size >= 4 && buffer_slice->data[0] == 'a' &&
+            BAIL_WITH_INPUT_ERROR_UNLESS(
+                buffer_slice->size >= 4 && buffer_slice->data[0] == 'a' &&
                 buffer_slice->data[1] == 'l' && buffer_slice->data[2] == 's' &&
-                buffer_slice->data[3] == 'e') {
-                *token = THSN_TOKEN_FALSE;
-                token_slice->size = 5;
-                thsn_slice_advance_unsafe(buffer_slice, 4);
-                return THSN_RESULT_SUCCESS;
-            } else {
-                return THSN_RESULT_INPUT_ERROR;
-            }
+                buffer_slice->data[3] == 'e');
+            *token = THSN_TOKEN_FALSE;
+            token_slice->size = 5;
+            thsn_slice_advance_unsafe(buffer_slice, 4);
+            return THSN_RESULT_SUCCESS;
         case '"': {
             *token_slice = thsn_slice_make(buffer_slice->data, 0);
             do {
@@ -194,10 +188,9 @@ static inline ThsnResult thsn_next_token(ThsnSlice* buffer_slice,
                 }
             }
             /* token_slice->size is at least 1 here */
-            if (token_slice->data[token_slice->size - 1] == '-' ||
-                token_slice->data[token_slice->size - 1] == '+') {
-                return THSN_RESULT_INPUT_ERROR;
-            }
+            BAIL_WITH_INPUT_ERROR_UNLESS(
+                token_slice->data[token_slice->size - 1] != '-' &&
+                token_slice->data[token_slice->size - 1] != '+');
             *token =
                 dot_present || e_present ? THSN_TOKEN_FLOAT : THSN_TOKEN_INT;
             return THSN_RESULT_SUCCESS;

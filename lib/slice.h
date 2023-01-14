@@ -46,9 +46,8 @@ static inline ThsnResult thsn_slice_at_offset(
     ThsnSlice base_slice, size_t offset, size_t min_size,
     ThsnSlice* /*out*/ slice_at_offset) {
     BAIL_ON_NULL_INPUT(slice_at_offset);
-    if (offset > base_slice.size || (base_slice.size - offset) < min_size) {
-        return THSN_RESULT_INPUT_ERROR;
-    }
+    BAIL_WITH_INPUT_ERROR_UNLESS(offset <= base_slice.size &&
+                                 (base_slice.size - offset) >= min_size);
     *slice_at_offset =
         thsn_slice_make(base_slice.data + offset, base_slice.size - offset);
     return THSN_RESULT_SUCCESS;
@@ -57,9 +56,7 @@ static inline ThsnResult thsn_slice_at_offset(
 static inline ThsnResult thsn_slice_truncate(ThsnSlice* /*mut*/ slice,
                                              size_t exact_size) {
     BAIL_ON_NULL_INPUT(slice);
-    if (exact_size > slice->size) {
-        return THSN_RESULT_INPUT_ERROR;
-    }
+    BAIL_WITH_INPUT_ERROR_UNLESS(exact_size <= slice->size);
     slice->size = exact_size;
     return THSN_RESULT_SUCCESS;
 }
@@ -107,13 +104,10 @@ static inline ThsnMutSlice thsn_mut_slice_make_empty() {
 static inline ThsnResult thsn_mut_slice_write(ThsnMutSlice* /*mut*/ mut_slice,
                                               ThsnSlice data_slice) {
     BAIL_ON_NULL_INPUT(mut_slice);
+    BAIL_WITH_INPUT_ERROR_UNLESS(mut_slice->size >= data_slice.size);
 
     if (data_slice.size == 0) {
         return THSN_RESULT_SUCCESS;
-    }
-
-    if (mut_slice->size < data_slice.size) {
-        return THSN_RESULT_INPUT_ERROR;
     }
 
     memcpy(mut_slice->data, data_slice.data, data_slice.size);
@@ -126,9 +120,8 @@ static inline ThsnResult thsn_mut_slice_at_offset(
     ThsnMutSlice base_slice, size_t offset, size_t min_size,
     ThsnMutSlice* /*out*/ mut_slice_at_offset) {
     BAIL_ON_NULL_INPUT(mut_slice_at_offset);
-    if (offset > base_slice.size || (base_slice.size - offset) < min_size) {
-        return THSN_RESULT_INPUT_ERROR;
-    }
+    BAIL_WITH_INPUT_ERROR_UNLESS(offset <= base_slice.size &&
+                                 (base_slice.size - offset) >= min_size);
     *mut_slice_at_offset =
         thsn_mut_slice_make(base_slice.data + offset, base_slice.size - offset);
     return THSN_RESULT_SUCCESS;
@@ -137,10 +130,7 @@ static inline ThsnResult thsn_mut_slice_at_offset(
 static inline ThsnResult thsn_slice_read(ThsnSlice* data_slice,
                                          ThsnMutSlice mut_slice) {
     BAIL_ON_NULL_INPUT(data_slice);
-
-    if (mut_slice.size > data_slice->size) {
-        return THSN_RESULT_INPUT_ERROR;
-    }
+    BAIL_WITH_INPUT_ERROR_UNLESS(mut_slice.size <= data_slice->size);
 
     memcpy(mut_slice.data, data_slice->data, mut_slice.size);
     data_slice->data += mut_slice.size;

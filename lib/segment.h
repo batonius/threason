@@ -187,15 +187,13 @@ static inline ThsnResult thsn_segment_read_string_from_slice(
     size_t* /*maybe out*/ stored_length) {
     BAIL_ON_NULL_INPUT(string_slice);
     char key_str_tag;
-    if (!thsn_slice_try_consume_char(&slice, &key_str_tag)) {
-        return THSN_RESULT_INPUT_ERROR;
-    }
+    BAIL_WITH_INPUT_ERROR_UNLESS(
+        thsn_slice_try_consume_char(&slice, &key_str_tag));
     *string_slice = thsn_slice_make_empty();
     switch (thsn_tag_type(key_str_tag)) {
         case THSN_TAG_REF_STRING:
-            if (thsn_tag_size(key_str_tag) != THSN_TAG_SIZE_INBOUND) {
-                return THSN_RESULT_INPUT_ERROR;
-            }
+            BAIL_WITH_INPUT_ERROR_UNLESS(thsn_tag_size(key_str_tag) ==
+                                         THSN_TAG_SIZE_INBOUND);
             BAIL_ON_ERROR(THSN_SLICE_READ_VAR(slice, *string_slice));
             if (stored_length != NULL) {
                 *stored_length = sizeof(ThsnTag) + sizeof(ThsnSlice);
@@ -361,9 +359,8 @@ static inline ThsnResult thsn_segment_read_number(
             break;
         }
         case THSN_TAG_DOUBLE: {
-            if (thsn_tag_size(value_tag) != THSN_TAG_SIZE_F64) {
-                return THSN_RESULT_INPUT_ERROR;
-            }
+            BAIL_WITH_INPUT_ERROR_UNLESS(thsn_tag_size(value_tag) ==
+                                         THSN_TAG_SIZE_F64);
             BAIL_ON_ERROR(THSN_SLICE_READ_VAR(value_slice, *value));
             break;
         }
@@ -393,9 +390,7 @@ static inline ThsnResult thsn_segment_read_composite(
     BAIL_ON_ERROR(
         thsn_segment_read_tagged_value(thsn_slice_from_mut_slice(segment_slice),
                                        offset, &value_tag, &value_slice));
-    if (thsn_tag_type(value_tag) != expected_type) {
-        return THSN_RESULT_INPUT_ERROR;
-    }
+    BAIL_WITH_INPUT_ERROR_UNLESS(thsn_tag_type(value_tag) == expected_type);
     switch (thsn_tag_size(value_tag)) {
         case THSN_TAG_SIZE_ZERO:
             *elements_table = thsn_slice_make_empty();

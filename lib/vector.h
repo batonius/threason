@@ -117,9 +117,7 @@ static inline ThsnResult thsn_vector_shrink(
     ThsnVector* /*mut*/ vector, size_t shrink_size,
     ThsnSlice* /*maybe out*/ data_slice) {
     BAIL_ON_NULL_INPUT(vector);
-    if (vector->offset < shrink_size) {
-        return THSN_RESULT_INPUT_ERROR;
-    }
+    BAIL_WITH_INPUT_ERROR_UNLESS(vector->offset >= shrink_size);
     vector->offset -= shrink_size;
     if (data_slice != NULL) {
         *data_slice =
@@ -132,11 +130,10 @@ static inline ThsnResult thsn_vector_slice_at_offset(ThsnVector vector,
                                                      size_t offset, size_t size,
                                                      ThsnSlice* /*out*/ slice) {
     BAIL_ON_NULL_INPUT(slice);
-    /* It's ok to read up to `capacity`, for example the data we just "popped"
-     * by decreasing `offset`. */
-    if (offset > vector.capacity || size > (vector.capacity - offset)) {
-        return THSN_RESULT_INPUT_ERROR;
-    }
+    /* It's ok to read beyond `offset` up to `capacity`, for example the data we
+     * just "popped" by decreasing `offset`. */
+    BAIL_WITH_INPUT_ERROR_UNLESS(offset <= vector.capacity &&
+                                 size <= (vector.capacity - offset));
     *slice = thsn_slice_make(vector.buffer + offset, size);
     return THSN_RESULT_SUCCESS;
 }
@@ -146,9 +143,8 @@ static inline ThsnResult thsn_vector_mut_slice_at_offset(
     ThsnMutSlice* /*out*/ mut_slice) {
     BAIL_ON_NULL_INPUT(mut_slice);
     /* It's never ok to write beyond `offset`. */
-    if (offset > vector.offset || size > (vector.offset - offset)) {
-        return THSN_RESULT_INPUT_ERROR;
-    }
+    BAIL_WITH_INPUT_ERROR_UNLESS(offset <= vector.offset &&
+                                 size <= (vector.offset - offset));
     *mut_slice = thsn_mut_slice_make(vector.buffer + offset, size);
     return THSN_RESULT_SUCCESS;
 }

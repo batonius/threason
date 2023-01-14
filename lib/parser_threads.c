@@ -70,15 +70,13 @@ static ThsnResult thsn_pp_iter_init(ThsnPreparseIterator* /*mut*/ pp_iter,
     BAIL_ON_NULL_INPUT(pp_iter);
     *pp_iter = (ThsnPreparseIterator){0};
     pp_iter->thread_contexts = thread_contexts;
-    if (!thsn_slice_is_empty(pp_iter->thread_contexts)) {
-        pp_iter->current_thread_context =
-            (ThsnThreadContext*)pp_iter->thread_contexts.data;
-        BAIL_ON_ERROR(thsn_slice_at_offset(pp_iter->thread_contexts,
-                                           sizeof(ThsnThreadContext), 0,
-                                           &pp_iter->thread_contexts));
-    } else {
-        return THSN_RESULT_INPUT_ERROR;
-    }
+    BAIL_WITH_INPUT_ERROR_UNLESS(
+        !thsn_slice_is_empty(pp_iter->thread_contexts));
+    pp_iter->current_thread_context =
+        (ThsnThreadContext*)pp_iter->thread_contexts.data;
+    BAIL_ON_ERROR(thsn_slice_at_offset(pp_iter->thread_contexts,
+                                       sizeof(ThsnThreadContext), 0,
+                                       &pp_iter->thread_contexts));
     return THSN_RESULT_SUCCESS;
 }
 
@@ -116,10 +114,9 @@ static ThsnResult thsn_pp_iter_advance_to_char(
         &pp_iter->current_thread_context->parsing_results[results_offset]
              .completed);
     pp_iter->current_thread_context->pp_scenario = results_offset;
-    if (pp_iter->current_thread_context->parsing_results[results_offset]
-            .failed) {
-        return THSN_RESULT_INPUT_ERROR;
-    }
+    BAIL_WITH_INPUT_ERROR_UNLESS(
+        !pp_iter->current_thread_context->parsing_results[results_offset]
+             .failed);
     pp_iter->current_pp_table =
         pp_iter->current_thread_context->parsing_results[results_offset]
             .pp_table;

@@ -47,9 +47,8 @@ static inline ThsnResult thsn_parser_context_finish(
 static inline ThsnResult thsn_parser_add_value_handle(
     ThsnParserContext* /*mut*/ parser_context, ThsnValueHandle value_handle) {
     BAIL_ON_NULL_INPUT(parser_context);
-    if (parser_context->state != THSN_PARSER_STATE_VALUE) {
-        return THSN_RESULT_INPUT_ERROR;
-    }
+    BAIL_WITH_INPUT_ERROR_UNLESS(parser_context->state ==
+                                 THSN_PARSER_STATE_VALUE);
     BAIL_ON_ERROR(thsn_segment_store_value_handle(&parser_context->segment,
                                                   value_handle));
     BAIL_ON_ERROR(
@@ -114,9 +113,7 @@ static inline ThsnResult thsn_parser_atod_checked(ThsnSlice slice,
                                                   double* /*out*/ result) {
     BAIL_ON_NULL_INPUT(result);
     const size_t MAX_DOUBLE_LEN = 128;
-    if (slice.size > MAX_DOUBLE_LEN) {
-        return THSN_RESULT_INPUT_ERROR;
-    }
+    BAIL_WITH_INPUT_ERROR_UNLESS(slice.size <= MAX_DOUBLE_LEN);
     char double_str[MAX_DOUBLE_LEN + 1];
     memcpy(double_str, slice.data, slice.size);
     double_str[slice.size] = '\0';
@@ -244,9 +241,7 @@ static inline ThsnResult thsn_parser_parse_next_array_element(
         parser_context->state = THSN_PARSER_STATE_FINISH;
         return THSN_RESULT_SUCCESS;
     }
-    if (token != THSN_TOKEN_COMMA) {
-        return THSN_RESULT_INPUT_ERROR;
-    }
+    BAIL_WITH_INPUT_ERROR_UNLESS(token == THSN_TOKEN_COMMA);
     BAIL_ON_ERROR(thsn_parser_add_composite_element(parser_context));
     ThsnParserState return_to_state = THSN_PARSER_STATE_NEXT_ARRAY_ELEMENT;
     BAIL_ON_ERROR(THSN_VECTOR_PUSH_VAR(parser_context->stack, return_to_state));
@@ -258,9 +253,7 @@ static inline ThsnResult thsn_parser_parse_next_kv(
     ThsnToken token, ThsnSlice token_slice,
     ThsnParserContext* /*mut*/ parser_context) {
     BAIL_ON_NULL_INPUT(parser_context);
-    if (token != THSN_TOKEN_STRING) {
-        return THSN_RESULT_INPUT_ERROR;
-    }
+    BAIL_WITH_INPUT_ERROR_UNLESS(token == THSN_TOKEN_STRING);
     BAIL_ON_ERROR(thsn_parser_add_composite_element(parser_context));
     BAIL_ON_ERROR(
         thsn_segment_store_string(&parser_context->segment, token_slice));
@@ -279,9 +272,7 @@ static inline ThsnResult thsn_parser_parse_first_kv(
             thsn_tag_make(THSN_TAG_OBJECT, THSN_TAG_SIZE_EMPTY),
             thsn_slice_make_empty());
     }
-    if (token != THSN_TOKEN_STRING) {
-        return THSN_RESULT_INPUT_ERROR;
-    }
+    BAIL_WITH_INPUT_ERROR_UNLESS(token == THSN_TOKEN_STRING);
     BAIL_ON_ERROR(thsn_parser_store_composite_header(
         parser_context, thsn_tag_make(THSN_TAG_OBJECT, THSN_TAG_SIZE_INBOUND),
         true));
@@ -296,9 +287,7 @@ static inline ThsnResult thsn_parser_parse_kv_colon(
     ThsnParserContext* /*mut*/ parser_context) {
     BAIL_ON_NULL_INPUT(parser_context);
     (void)token_slice;
-    if (token != THSN_TOKEN_COLON) {
-        return THSN_RESULT_INPUT_ERROR;
-    }
+    BAIL_WITH_INPUT_ERROR_UNLESS(token == THSN_TOKEN_COLON);
     const ThsnParserState return_to_state = THSN_PARSER_STATE_KV_END;
     BAIL_ON_ERROR(THSN_VECTOR_PUSH_VAR(parser_context->stack, return_to_state));
     parser_context->state = THSN_PARSER_STATE_VALUE;
@@ -316,9 +305,7 @@ static inline ThsnResult thsn_parser_parse_kv_end(
         parser_context->state = THSN_PARSER_STATE_FINISH;
         return THSN_RESULT_SUCCESS;
     }
-    if (token != THSN_TOKEN_COMMA) {
-        return THSN_RESULT_INPUT_ERROR;
-    }
+    BAIL_WITH_INPUT_ERROR_UNLESS(token == THSN_TOKEN_COMMA);
     parser_context->state = THSN_PARSER_STATE_NEXT_KV;
     return THSN_RESULT_SUCCESS;
 }
