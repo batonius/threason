@@ -50,7 +50,7 @@ ThsnResult thsn_document_visit(ThsnDocument* /*mut*/ document,
     const ThsnVisitTag VISIT_TAG_ARRAY = THSN_VISIT_TAG_ARRAY;
     const ThsnVisitTag VISIT_TAG_OBJECT_KV = THSN_VISIT_TAG_OBJECT_KV;
     ThsnVector stack = thsn_vector_make_empty();
-    BAIL_ON_ERROR(thsn_vector_allocate(&stack, 1024));
+    BAIL_ON_ERROR(thsn_vector_allocate(&stack, 1024 * 1024));
     bool skip = false;
     ThsnValueHandle current_value_handle = THSN_VALUE_HANDLE_FIRST;
     bool done_visiting = false;

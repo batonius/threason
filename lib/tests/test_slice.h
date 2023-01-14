@@ -1,5 +1,6 @@
 #ifndef THSN_TEST_SLICE_H
 #define THSN_TEST_SLICE_H
+
 #include "slice.h"
 #include "testing.h"
 
@@ -24,7 +25,7 @@ TEST(creates_slice_from_c_str) {
     ASSERT_SUCCESS(thsn_slice_from_c_str(string, &slice));
     ASSERT_EQ(slice.data, string);
     ASSERT_EQ(slice.size, 4);
-    ASSERT_INPUT_ERROR(thsn_slice_from_c_str(NULL, &slice));
+    ASSERT_NULL_INPUT_ERROR(thsn_slice_from_c_str(NULL, &slice));
 }
 
 TEST(creates_slice_from_var) {

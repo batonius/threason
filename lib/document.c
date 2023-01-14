@@ -1,9 +1,47 @@
 #include <stddef.h>
 
+#include "parser.h"
 #include "result.h"
 #include "segment.h"
 #include "slice.h"
 #include "threason.h"
+
+ThsnResult thsn_document_free(ThsnDocument** /*in*/ document) {
+    BAIL_ON_NULL_INPUT(document);
+    for (size_t i = 0; i < (*document)->segment_count; ++i) {
+        free((*document)->segments[i].data);
+    }
+    free(*document);
+    *document = NULL;
+    return THSN_RESULT_SUCCESS;
+}
+
+ThsnResult thsn_document_parse(ThsnSlice* /*mut*/ buffer_slice,
+                               ThsnDocument** /*out*/ document) {
+    BAIL_ON_NULL_INPUT(buffer_slice);
+    BAIL_ON_NULL_INPUT(document);
+    BAIL_ON_ERROR(thsn_document_allocate(document, 1));
+    ThsnToken token;
+    ThsnSlice token_slice;
+    ThsnParserContext parser_context;
+    BAIL_ON_ERROR(thsn_parser_context_init(&parser_context));
+    bool finished = false;
+    while (!finished) {
+        GOTO_ON_ERROR(thsn_next_token(buffer_slice, &token_slice, &token),
+                      error_cleanup);
+        GOTO_ON_ERROR(thsn_parser_parse_next_token(&parser_context, token,
+                                                   token_slice, &finished),
+                      error_cleanup);
+    }
+    GOTO_ON_ERROR(
+        thsn_parser_context_finish(&parser_context, &(*document)->segments[0]),
+        error_cleanup);
+    return THSN_RESULT_SUCCESS;
+
+error_cleanup:
+    thsn_parser_context_finish(&parser_context, NULL);
+    return THSN_RESULT_INPUT_ERROR;
+}
 
 static ThsnResult thsn_document_read_tagged_value(
     const ThsnDocument* /*in*/ document, ThsnValueHandle value_handle,

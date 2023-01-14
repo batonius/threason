@@ -21,7 +21,7 @@ typedef struct {
     /* Thread outputs */
     struct {
         ThsnOwningSlice pp_table;
-        ThsnOwningMutSlice parse_result;
+        ThsnOwningMutSlice segment;
         bool failed;
         /* Completion flag */
         volatile atomic_bool completed;
@@ -208,9 +208,9 @@ static void thsn_advance_after_end_of_string(ThsnSlice* /*mut*/ buffer_slice) {
 }
 
 static ThsnResult thsn_preparse_buffer(
-    ThsnSlice buffer_slice, ThsnOwningMutSlice* /*out*/ parse_result,
+    ThsnSlice buffer_slice, ThsnOwningMutSlice* /*out*/ segment,
     ThsnOwningSlice* /*out*/ preparsed_table) {
-    BAIL_ON_NULL_INPUT(parse_result);
+    BAIL_ON_NULL_INPUT(segment);
     BAIL_ON_NULL_INPUT(preparsed_table);
 
     ThsnVector preparsed_vector = thsn_vector_make_empty();
@@ -220,7 +220,7 @@ static ThsnResult thsn_preparse_buffer(
 #ifdef METRICS
     size_t total_preparsed = 0;
 #endif
-    /* TODO: try switching single-pass walkthrough */
+    /* TODO: consider single-pass scenario-switching walkthrough */
     while (true) {
         ThsnToken token;
         ThsnSlice token_slice;
@@ -266,7 +266,7 @@ success_cleanup:
     fprintf(stderr, "Total preparsed %zu, skipped %zu\n", total_preparsed,
             buffer_slice.size);
 #endif
-    thsn_parser_context_finish(&parser_context, parse_result);
+    thsn_parser_context_finish(&parser_context, segment);
     *preparsed_table = thsn_vector_as_slice(preparsed_vector);
     return THSN_RESULT_SUCCESS;
 error_cleanup:
@@ -287,8 +287,7 @@ static int thsn_preparse_thread(void* /*in*/ user_data) {
     thsn_advance_after_end_of_string(&subbuffer_slice);
     if (thsn_preparse_buffer(
             subbuffer_slice,
-            &thread_context->parsing_results[THSN_PP_STARTS_IN_STRING]
-                 .parse_result,
+            &thread_context->parsing_results[THSN_PP_STARTS_IN_STRING].segment,
             &thread_context->parsing_results[THSN_PP_STARTS_IN_STRING]
                  .pp_table) != THSN_RESULT_SUCCESS) {
         thread_context->parsing_results[THSN_PP_STARTS_IN_STRING].failed = true;
@@ -300,7 +299,7 @@ static int thsn_preparse_thread(void* /*in*/ user_data) {
     if (thsn_preparse_buffer(
             thread_context->subbuffer_slice,
             &thread_context->parsing_results[THSN_PP_STARTS_NOT_IN_STRING]
-                 .parse_result,
+                 .segment,
             &thread_context->parsing_results[THSN_PP_STARTS_NOT_IN_STRING]
                  .pp_table) != THSN_RESULT_SUCCESS) {
         thread_context->parsing_results[THSN_PP_STARTS_NOT_IN_STRING].failed =
@@ -315,10 +314,10 @@ static int thsn_preparse_thread(void* /*in*/ user_data) {
 }
 
 static ThsnResult thsn_main_thread(ThsnSlice* /*mut*/ buffer_slice,
-                                   ThsnOwningMutSlice* /*out*/ parse_result,
+                                   ThsnOwningMutSlice* /*out*/ segment,
                                    ThsnSlice preparse_thread_contexts) {
     BAIL_ON_NULL_INPUT(buffer_slice);
-    BAIL_ON_NULL_INPUT(parse_result);
+    BAIL_ON_NULL_INPUT(segment);
     ThsnPreparseIterator pp_iter;
     BAIL_ON_ERROR(thsn_pp_iter_init(&pp_iter, preparse_thread_contexts));
     ThsnParserContext parser_context;
@@ -369,7 +368,7 @@ static ThsnResult thsn_main_thread(ThsnSlice* /*mut*/ buffer_slice,
 #endif
         }
     }
-    BAIL_ON_ERROR(thsn_parser_context_finish(&parser_context, parse_result));
+    BAIL_ON_ERROR(thsn_parser_context_finish(&parser_context, segment));
 #ifdef METRICS
     fprintf(stderr, "Total skipped %zu, total parsed %zu\n", total_skipped,
             main_thread_context->buffer_slice.size - total_skipped);
@@ -430,14 +429,14 @@ ThsnResult thsn_document_parse_multithreaded(ThsnSlice* /*mut*/ json_str_slice,
         }
         current_offset += subbuffer_size;
     }
-    ThsnOwningMutSlice parse_result;
-    GOTO_ON_ERROR(thsn_main_thread(json_str_slice, &parse_result,
+    ThsnOwningMutSlice segment;
+    GOTO_ON_ERROR(thsn_main_thread(json_str_slice, &segment,
                                    thsn_slice_make((const char*)thread_contexts,
                                                    sizeof(ThsnThreadContext) *
                                                        threads_count)),
                   error_cleanup);
     /* Fill in results */
-    (*document)->segments[0] = parse_result;
+    (*document)->segments[0] = segment;
     for (size_t i = 1; i < (*document)->segment_count; ++i) {
         thsn_pp_wait_for_completion(
             &thread_contexts[i]
@@ -451,18 +450,18 @@ ThsnResult thsn_document_parse_multithreaded(ThsnSlice* /*mut*/ json_str_slice,
             (*document)->segments[i] =
                 thread_contexts[i]
                     .parsing_results[THSN_PP_STARTS_IN_STRING]
-                    .parse_result;
+                    .segment;
             free(thread_contexts[i]
                      .parsing_results[THSN_PP_STARTS_NOT_IN_STRING]
-                     .parse_result.data);
+                     .segment.data);
         } else {
             (*document)->segments[i] =
                 thread_contexts[i]
                     .parsing_results[THSN_PP_STARTS_NOT_IN_STRING]
-                    .parse_result;
+                    .segment;
             free(thread_contexts[i]
                      .parsing_results[THSN_PP_STARTS_IN_STRING]
-                     .parse_result.data);
+                     .segment.data);
         }
         free((void*)thread_contexts[i]
                  .parsing_results[THSN_PP_STARTS_IN_STRING]
@@ -481,10 +480,9 @@ error_cleanup:
             &thread_contexts[i]
                  .parsing_results[THSN_PP_STARTS_NOT_IN_STRING]
                  .completed);
-        /* free(0) is a NO-OP */
         free(thread_contexts[i]
                  .parsing_results[THSN_PP_STARTS_NOT_IN_STRING]
-                 .parse_result.data);
+                 .segment.data);
         free((void*)thread_contexts[i]
                  .parsing_results[THSN_PP_STARTS_NOT_IN_STRING]
                  .pp_table.data);
@@ -494,7 +492,7 @@ error_cleanup:
                  .completed);
         free(thread_contexts[i]
                  .parsing_results[THSN_PP_STARTS_IN_STRING]
-                 .parse_result.data);
+                 .segment.data);
         free((void*)thread_contexts[i]
                  .parsing_results[THSN_PP_STARTS_IN_STRING]
                  .pp_table.data);
