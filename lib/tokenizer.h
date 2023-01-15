@@ -121,7 +121,7 @@ static inline ThsnResult thsn_next_token(ThsnSlice* buffer_slice,
                     *token = THSN_TOKEN_STRING;
                     return THSN_RESULT_SUCCESS;
                 }
-                // `+1` to step over the escaped quote
+                /* `+1` to step over the escaped quote */
                 const size_t step_size = (next_quotes - buffer_slice->data) + 1;
                 token_slice->size += step_size;
                 thsn_slice_advance_unsafe(buffer_slice, step_size);
@@ -179,7 +179,7 @@ static inline ThsnResult thsn_next_token(ThsnSlice* buffer_slice,
                             waiting_for_sign = false;
                             break;
                         }
-                        [[fallthrough]];
+                        /* fallthrough */
                     default:
                         thsn_slice_rewind_unsafe(buffer_slice, 1);
                         --token_slice->size;

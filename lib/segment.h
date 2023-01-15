@@ -35,6 +35,8 @@ typedef ThsnMutSlice ThsnSegmentMutSlice;
 #define THSN_TAG_SIZE_INBOUND 1
 #define THSN_TAG_SIZE_INBOUND_SORTED 2
 
+extern _Thread_local ThsnSlice* CURRENT_SEGMENT;
+
 static inline ThsnTag thsn_tag_make(ThsnTagType type, ThsnTagSize size) {
     return (ThsnTag)((type << 4) | (size & 0x0f));
 }
@@ -213,13 +215,15 @@ static inline ThsnResult thsn_segment_read_string_from_slice(
     return THSN_RESULT_SUCCESS;
 }
 
-static inline int thsn_compare_kv_keys(const void* a, const void* b,
-                                       void* data) {
+static inline int thsn_compare_kv_keys(const void* a, const void* b) {
+    if (CURRENT_SEGMENT == NULL) {
+        return 0;
+    }
+    const ThsnSlice* result_slice = CURRENT_SEGMENT;
     size_t a_offset;
     size_t b_offset;
     memcpy(&a_offset, a, sizeof(size_t));
     memcpy(&b_offset, b, sizeof(size_t));
-    const ThsnSlice* result_slice = (ThsnSlice*)data;
     ThsnSlice a_key_slice;
     ThsnSlice b_key_slice;
     if (thsn_slice_at_offset(*result_slice, a_offset, 1, &a_key_slice) !=
@@ -260,8 +264,9 @@ static inline int thsn_compare_kv_keys(const void* a, const void* b,
 
 static inline ThsnResult thsn_segment_sort_elements_table(
     ThsnMutSlice elements_table, ThsnSlice result_slice) {
-    qsort_r(elements_table.data, elements_table.size / sizeof(size_t),
-            sizeof(size_t), thsn_compare_kv_keys, &result_slice);
+    CURRENT_SEGMENT = &result_slice;
+    qsort(elements_table.data, elements_table.size / sizeof(size_t),
+          sizeof(size_t), thsn_compare_kv_keys);
     return THSN_RESULT_SUCCESS;
 }
 

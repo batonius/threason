@@ -6,6 +6,8 @@
 #include "slice.h"
 #include "threason.h"
 
+_Thread_local ThsnSlice* CURRENT_SEGMENT = NULL;
+
 ThsnResult thsn_document_free(ThsnDocument** /*in*/ document) {
     BAIL_ON_NULL_INPUT(document);
     for (size_t i = 0; i < (*document)->segment_count; ++i) {

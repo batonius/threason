@@ -109,7 +109,7 @@ static ThsnResult thsn_pp_iter_advance_to_char(
     }
     ThsnPreparseScenario results_offset =
         in_string ? THSN_PP_STARTS_IN_STRING : THSN_PP_STARTS_NOT_IN_STRING;
-    // We have new current_thread_conext here, wait for it
+    /* We have new current_thread_conext here, wait for it */
     thsn_pp_wait_for_completion(
         &pp_iter->current_thread_context->parsing_results[results_offset]
              .completed);
@@ -198,7 +198,7 @@ static void thsn_advance_after_end_of_string(ThsnSlice* /*mut*/ buffer_slice) {
             thsn_slice_advance_unsafe(buffer_slice, step_size + 1);
             break;
         }
-        // `+1` to step over the escaped quote
+        /* `+1` to step over the escaped quote */
         const size_t step_size = (next_quotes - buffer_slice->data) + 1;
         thsn_slice_advance_unsafe(buffer_slice, step_size);
     }

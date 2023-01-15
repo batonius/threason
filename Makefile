@@ -1,7 +1,7 @@
 CC=clang
 AR=ar
-CFLAGS=-Wall -Wextra -Werror -pedantic -std=c2x -march=native \
-       -D_GNU_SOURCE -Iinclude -flto 
+CFLAGS=-Wall -Wextra -Werror -pedantic -std=c11 -march=native -Iinclude -flto 
+BIN-CFLAGS=$(CFLAGS) -D_POSIX_C_SOURCE=199309L
 LDFLAGS=
 BUILD-DIR=build
 SRC-DIR=lib
@@ -64,7 +64,7 @@ $(LIB-AR): $(OBJS)
 	$(AR) cr $@ $^
 
 $(BUILD-DIR)/%: $(BIN-DIR)/%.c $(LIB-AR)
-	$(CC) $(CFLAGS) $(LDFLAGS) $^ -o $@
+	$(CC) $(BIN-CFLAGS) $(LDFLAGS) $^ -o $@
 
 $(BUILD-DIR)/%: $(TEST-DIR)/%.c $(OBJS)
 	$(CC) $(CFLAGS) -I$(SRC-DIR) $(LDFLAGS) $^ -o $@
