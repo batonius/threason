@@ -142,7 +142,6 @@ static inline ThsnResult thsn_segment_store_composite_header(
     BAIL_ON_ERROR(thsn_vector_grow(segment, composite_header_size,
                                    &composite_header_mut_slice));
     BAIL_ON_ERROR(THSN_MUT_SLICE_WRITE_VAR(composite_header_mut_slice, tag));
-    composite_header_offset += sizeof(tag);
     *header_offset = composite_header_offset;
     return THSN_RESULT_SUCCESS;
 }
@@ -169,7 +168,7 @@ static inline ThsnResult thsn_segment_store_composite_elements_table(
     }
     ThsnMutSlice composite_header;
     BAIL_ON_ERROR(thsn_vector_mut_slice_at_offset(
-        *segment, composite_header_offset,
+        *segment, composite_header_offset + sizeof(ThsnTag),
         sizeof(size_t) * (reserve_sorted_table ? 3 : 2), &composite_header));
     BAIL_ON_ERROR(
         THSN_MUT_SLICE_WRITE_VAR(composite_header, composite_elements_count));
