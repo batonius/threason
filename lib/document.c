@@ -6,6 +6,7 @@
 #include "slice.h"
 #include "threason.h"
 
+/* Used for sorting */
 _Thread_local ThsnSlice* CURRENT_SEGMENT = NULL;
 
 ThsnResult thsn_document_free(ThsnDocument** /*in*/ document) {

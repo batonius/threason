@@ -149,9 +149,8 @@ TEST(stores_and_reads_strings) {
     for (size_t i = 0; i < sizeof(values_to_test) / sizeof(values_to_test[0]);
          ++i) {
         values_offsets[i] = thsn_vector_current_offset(vector);
-        ThsnSlice string_slice;
-        ASSERT_SUCCESS(thsn_slice_from_c_str(values_to_test[i], &string_slice));
-        ASSERT_SUCCESS(thsn_segment_store_string(&vector, string_slice));
+        ASSERT_SUCCESS(thsn_segment_store_string(
+            &vector, thsn_slice_from_c_str(values_to_test[i])));
     }
 
     ThsnSlice slice = thsn_vector_as_slice(vector);
@@ -220,17 +219,16 @@ TEST(stores_and_reads_objects) {
     ASSERT_SUCCESS(thsn_segment_store_composite_header(
         &vector, thsn_tag_make(THSN_TAG_OBJECT, THSN_TAG_SIZE_INBOUND), true,
         &header_offset));
-    ThsnSlice string_slice = thsn_slice_make_empty();
     size_t first_kv = thsn_vector_current_offset(vector);
-    ASSERT_SUCCESS(thsn_slice_from_c_str("z", &string_slice));
-    ASSERT_SUCCESS(thsn_segment_store_string(&vector, string_slice));
+    ASSERT_SUCCESS(
+        thsn_segment_store_string(&vector, thsn_slice_from_c_str("z")));
     ASSERT_SUCCESS(thsn_segment_store_int(&vector, 1));
     size_t second_kv = thsn_vector_current_offset(vector);
-    ASSERT_SUCCESS(thsn_slice_from_c_str("random string", &string_slice));
-    ASSERT_SUCCESS(thsn_segment_store_string(&vector, string_slice));
+    ASSERT_SUCCESS(thsn_segment_store_string(
+        &vector, thsn_slice_from_c_str("random string")));
     ASSERT_SUCCESS(thsn_segment_store_null(&vector));
     size_t third_kv = thsn_vector_current_offset(vector);
-    ASSERT_SUCCESS(thsn_slice_from_c_str("a string", &string_slice));
+    ThsnSlice string_slice = thsn_slice_from_c_str("a string");
     ASSERT_SUCCESS(thsn_segment_store_string(&vector, string_slice));
     ASSERT_SUCCESS(thsn_segment_store_string(&vector, string_slice));
     size_t elements_table[] = {first_kv, second_kv, third_kv};
@@ -261,29 +259,25 @@ TEST(stores_and_reads_objects) {
 
     size_t element_offset = 0;
     bool found = false;
-    ASSERT_SUCCESS(thsn_slice_from_c_str("a string", &string_slice));
-    ASSERT_SUCCESS(thsn_segment_object_index(thsn_vector_as_slice(vector),
-                                             sorted_table, string_slice,
-                                             &element_offset, &found));
+    ASSERT_SUCCESS(thsn_segment_object_index(
+        thsn_vector_as_slice(vector), sorted_table,
+        thsn_slice_from_c_str("a string"), &element_offset, &found));
     ASSERT_TRUE(found);
-    ASSERT_SUCCESS(thsn_slice_from_c_str("z", &string_slice));
-    ASSERT_SUCCESS(thsn_segment_object_index(thsn_vector_as_slice(vector),
-                                             sorted_table, string_slice,
-                                             &element_offset, &found));
+    ASSERT_SUCCESS(thsn_segment_object_index(
+        thsn_vector_as_slice(vector), sorted_table, thsn_slice_from_c_str("z"),
+        &element_offset, &found));
     ASSERT_TRUE(found);
     double value = 0;
     ASSERT_SUCCESS(thsn_segment_read_number(thsn_vector_as_slice(vector),
                                             element_offset, &value));
     ASSERT_EQ(value, 1);
-    ASSERT_SUCCESS(thsn_slice_from_c_str("random string", &string_slice));
-    ASSERT_SUCCESS(thsn_segment_object_index(thsn_vector_as_slice(vector),
-                                             sorted_table, string_slice,
-                                             &element_offset, &found));
+    ASSERT_SUCCESS(thsn_segment_object_index(
+        thsn_vector_as_slice(vector), sorted_table,
+        thsn_slice_from_c_str("random string"), &element_offset, &found));
     ASSERT_TRUE(found);
-    ASSERT_SUCCESS(thsn_slice_from_c_str("another string", &string_slice));
-    ASSERT_SUCCESS(thsn_segment_object_index(thsn_vector_as_slice(vector),
-                                             sorted_table, string_slice,
-                                             &element_offset, &found));
+    ASSERT_SUCCESS(thsn_segment_object_index(
+        thsn_vector_as_slice(vector), sorted_table,
+        thsn_slice_from_c_str("another string"), &element_offset, &found));
     ASSERT_FALSE(found);
     ASSERT_SUCCESS(thsn_vector_free(&vector));
 }

@@ -21,11 +21,12 @@ TEST(creates_slice_from_fields) {
 
 TEST(creates_slice_from_c_str) {
     const char* const string = "asdf";
-    ThsnSlice slice;
-    ASSERT_SUCCESS(thsn_slice_from_c_str(string, &slice));
+    ThsnSlice slice = thsn_slice_from_c_str(string);
     ASSERT_EQ(slice.data, string);
     ASSERT_EQ(slice.size, 4);
-    ASSERT_NULL_INPUT_ERROR(thsn_slice_from_c_str(NULL, &slice));
+    slice = thsn_slice_from_c_str(NULL);
+    ASSERT_EQ(slice.data, NULL);
+    ASSERT_EQ(slice.size, 0);
 }
 
 TEST(creates_slice_from_var) {

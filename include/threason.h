@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <string.h>
 
 /*!
     \file threason.h
@@ -68,6 +69,14 @@ typedef struct {
     size_t size;
     char* data;
 } ThsnMutSlice;
+
+static inline ThsnSlice thsn_slice_make(const char* data, size_t size) {
+    return (ThsnSlice){.data = data, .size = size};
+}
+
+static inline ThsnSlice thsn_slice_from_c_str(const char* data) {
+    return thsn_slice_make(data, data == NULL ? 0 : strlen(data));
+}
 
 typedef ThsnMutSlice ThsnOwningMutSlice;
 typedef ThsnSlice ThsnOwningSlice;

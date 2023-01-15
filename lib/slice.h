@@ -3,7 +3,6 @@
 
 #include <stdbool.h>
 #include <stdlib.h>
-#include <string.h>
 
 #include "result.h"
 #include "threason.h"
@@ -22,24 +21,12 @@ static inline ThsnSlice thsn_slice_make_empty() {
     return (ThsnSlice){.data = NULL, .size = 0};
 }
 
-static inline ThsnSlice thsn_slice_make(const char* data, size_t size) {
-    return (ThsnSlice){.data = data, .size = size};
-}
-
 static inline const char* thsn_slice_end(ThsnSlice slice) {
     return slice.data + slice.size;
 }
 
 static inline ThsnSlice thsn_slice_from_mut_slice(ThsnMutSlice mut_slice) {
     return thsn_slice_make(mut_slice.data, mut_slice.size);
-}
-
-static inline ThsnResult thsn_slice_from_c_str(const char* data,
-                                               ThsnSlice* result_slice) {
-    BAIL_ON_NULL_INPUT(data);
-    BAIL_ON_NULL_INPUT(result_slice);
-    *result_slice = (ThsnSlice){.data = data, .size = strlen(data)};
-    return THSN_RESULT_SUCCESS;
 }
 
 static inline ThsnResult thsn_slice_at_offset(
