@@ -27,7 +27,7 @@ ThsnResult thsn_document_parse(ThsnSlice* /*mut*/ buffer_slice,
     ThsnToken token;
     ThsnSlice token_slice;
     ThsnParserContext parser_context;
-    BAIL_ON_ERROR(thsn_parser_context_init(&parser_context));
+    GOTO_ON_ERROR(thsn_parser_context_init(&parser_context), document_cleanup);
     bool finished = false;
     while (!finished) {
         GOTO_ON_ERROR(thsn_next_token(buffer_slice, &token_slice, &token),
@@ -43,6 +43,8 @@ ThsnResult thsn_document_parse(ThsnSlice* /*mut*/ buffer_slice,
 
 error_cleanup:
     thsn_parser_context_finish(&parser_context, NULL);
+document_cleanup:
+    thsn_document_free(document);
     return THSN_RESULT_INPUT_ERROR;
 }
 

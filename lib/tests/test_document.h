@@ -53,9 +53,58 @@ TEST(indexes_object_by_key) {
     thsn_document_free(&document);
 }
 
+TEST(parses_simple_documents) {
+    ThsnDocument* document;
+    const char* documents[] = {
+        "",
+        "1",
+        "true",
+        "null",
+        "false",
+        "\"abc\\\"def\"",
+        "{ \"a\": 1e0 }",
+        "[null, 0, \"\", {}, false, []]",
+        "[{\"\": \"\"}, 100, true, [1]]",
+    };
+    for (size_t i = 0; i < sizeof(documents) / sizeof(documents[0]); ++i) {
+        {
+            ThsnSlice document_slice = thsn_slice_from_c_str(documents[i]);
+            ASSERT_SUCCESS(thsn_document_parse(&document_slice, &document));
+            ASSERT_SUCCESS(thsn_document_free(&document));
+        }
+        {
+            ThsnSlice document_slice = thsn_slice_from_c_str(documents[i]);
+            ASSERT_SUCCESS(thsn_document_parse_multithreaded(&document_slice,
+                                                             &document, 8));
+            ASSERT_SUCCESS(thsn_document_free(&document));
+        }
+    }
+}
+
+TEST(fails_at_invalid_documents) {
+    ThsnDocument* document;
+    const char* documents[] = {",",    ":",   "]",     "(",
+                               "{",    "}",   "a",     "1..",
+                               "True", "nil", "faLse", "{ \"a\": 1e0",
+                               "}",    ": 1", "[1, 2}"};
+    for (size_t i = 0; i < sizeof(documents) / sizeof(documents[0]); ++i) {
+        {
+            ThsnSlice document_slice = thsn_slice_from_c_str(documents[i]);
+            ASSERT_INPUT_ERROR(thsn_document_parse(&document_slice, &document));
+        }
+        {
+            ThsnSlice document_slice = thsn_slice_from_c_str(documents[i]);
+            ASSERT_INPUT_ERROR(thsn_document_parse_multithreaded(
+                &document_slice, &document, 8));
+        }
+    }
+}
+
 /* clang-format off */
 TEST_SUITE(document)
     indexes_object_by_key,
+    parses_simple_documents,
+    fails_at_invalid_documents,
 END_TEST_SUITE()
 
 #endif

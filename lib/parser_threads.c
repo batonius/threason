@@ -1,4 +1,6 @@
+#ifdef METRICS
 #include <stdio.h>
+#endif
 
 #include "parser.h"
 #include "stdatomic.h"
@@ -381,11 +383,17 @@ ThsnResult thsn_document_parse_multithreaded(ThsnSlice* /*mut*/ json_str_slice,
                                              size_t threads_count) {
     BAIL_ON_NULL_INPUT(json_str_slice);
     BAIL_ON_NULL_INPUT(document);
-    BAIL_ON_ERROR(thsn_document_allocate(document, threads_count));
+    BAIL_WITH_INPUT_ERROR_UNLESS(threads_count > 0);
     size_t threads_created = 0;
-    if (json_str_slice->size / 32 < threads_count) {
-        threads_count = json_str_slice->size / 32;
+    static const size_t MIN_THREAD_SLICE_SIZE = 1024;
+    if (json_str_slice->size / MIN_THREAD_SLICE_SIZE < threads_count) {
+        threads_count = json_str_slice->size / MIN_THREAD_SLICE_SIZE;
+        threads_count = threads_count == 0 ? 1 : threads_count;
     }
+#ifdef METRICS
+    fprintf(stderr, "Effective threads_count %zu\n", threads_count);
+#endif
+    BAIL_ON_ERROR(thsn_document_allocate(document, threads_count));
     ThsnThreadContext* thread_contexts =
         calloc(1, sizeof(ThsnThreadContext) * threads_count);
     size_t subbuffer_size = json_str_slice->size / threads_count;
@@ -397,7 +405,9 @@ ThsnResult thsn_document_parse_multithreaded(ThsnSlice* /*mut*/ json_str_slice,
     GOTO_ON_ERROR(thsn_slice_truncate(&thread_contexts[0].subbuffer_slice,
                                       current_offset),
                   error_cleanup);
+#ifdef METRICS
     fprintf(stderr, "Thread 0: buffer size %zu\n", current_offset);
+#endif
     for (size_t i = 1; i < threads_count; ++i) {
         thread_contexts[i] = (ThsnThreadContext){0};
         thread_contexts[i].chunk_no = i;
@@ -407,7 +417,9 @@ ThsnResult thsn_document_parse_multithreaded(ThsnSlice* /*mut*/ json_str_slice,
         } else if (buffer_left <= subbuffer_size) {
             subbuffer_size = buffer_left;
         }
+#ifdef METRICS
         fprintf(stderr, "Thread %zu: buffer size %zu\n", i, subbuffer_size);
+#endif
         GOTO_ON_ERROR(thsn_slice_at_offset(*json_str_slice, current_offset,
                                            subbuffer_size,
                                            &thread_contexts[i].subbuffer_slice),
@@ -495,5 +507,6 @@ error_cleanup:
                  .pp_table.data);
     }
     free(thread_contexts);
+    thsn_document_free(document);
     return THSN_RESULT_INPUT_ERROR;
 }
