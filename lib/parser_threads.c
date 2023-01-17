@@ -219,7 +219,7 @@ static ThsnResult thsn_preparse_buffer(
 #ifdef METRICS
     size_t total_preparsed = 0;
 #endif
-    /* TODO: consider single-pass scenario-switching walkthrough */
+    /* CONSIDER: Single-pass scenario-switching walkthrough */
     while (true) {
         ThsnToken token;
         ThsnSlice token_slice;
