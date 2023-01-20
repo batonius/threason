@@ -6,6 +6,9 @@
 #include <stdint.h>
 #include <string.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 /*!
     \file threason.h
     \brief A JSON-parsing library.
@@ -46,12 +49,12 @@ typedef struct {
 } ThsnValueHandle;
 
 /*! The first value in the parsed document, the top level of the JSON tree. */
-static inline ThsnValueHandle thsn_value_handle_first() {
+static inline ThsnValueHandle thsn_value_handle_first(void) {
     return (ThsnValueHandle){0};
 }
 
-static inline ThsnValueHandle thsn_value_handle_not_found() {
-    return (ThsnValueHandle){.segment_no = UINT8_MAX, .offset = -1};
+static inline ThsnValueHandle thsn_value_handle_not_found(void) {
+    return (ThsnValueHandle){.segment_no = UINT8_MAX, .offset = 0};
 }
 
 static inline bool thsn_value_handle_is_not_found(
@@ -71,7 +74,7 @@ typedef struct {
 } ThsnMutSlice;
 
 static inline ThsnSlice thsn_slice_make(const char* data, size_t size) {
-    return (ThsnSlice){.data = data, .size = size};
+    return (ThsnSlice){.size = size, .data = data};
 }
 
 static inline ThsnSlice thsn_slice_from_c_str(const char* data) {
@@ -211,4 +214,9 @@ extern ThsnResult thsn_document_object_consume_element(
 extern ThsnResult thsn_document_object_index(
     const ThsnDocument* /*in*/ document, ThsnValueObjectTable object_table,
     ThsnSlice key_slice, ThsnValueHandle* /*out*/ element_handle);
+
+#ifdef __cplusplus
+}
+#endif
+
 #endif

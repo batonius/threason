@@ -21,7 +21,7 @@ typedef struct {
 
 #define TEST(name)                                                      \
     static void test_function_##name(TestResult* test_result);          \
-    static TestResult name() {                                          \
+    static TestResult name(void) {                                      \
         TestResult test_result = {.total_tests = 0, .failed_tests = 0}; \
         test_result.test_name = #name;                                  \
         test_function_##name(&test_result);                             \
@@ -89,55 +89,11 @@ typedef struct {
 
 #define ASSERT_FALSE(v) ASSERT_EQ((v), false)
 
-#define ASSERT_SLICE_EQ_BYTES(slice_)     \
-    do {                                  \
-        ++test_result->total_tests;       \
-        ThsnSlice slice = slice_;         \
-        const char* slice_name = #slice_; \
-    char bytes[] = {
-#define END_BYTES()                                                         \
-    }                                                                       \
-    ;                                                                       \
-    if (slice.size != sizeof(bytes)) {                                      \
-        ++test_result->failed_tests;                                        \
-        fprintf(stderr,                                                     \
-                "        %s:%d: slice %s has size %zu, expected %zu.\n",    \
-                __FILE__, __LINE__, slice_name, slice.size, sizeof(bytes)); \
-        fprintf(stderr, "        slice: ");                                 \
-        for (size_t i = 0; i < 100 && i < slice.size; ++i) {                \
-            fprintf(stderr, "%02X ", (unsigned char)slice.data[i]);         \
-        }                                                                   \
-        fprintf(stderr, "\n");                                              \
-        fprintf(stderr, "        bytes: ");                                 \
-        for (size_t i = 0; i < 100 && i < sizeof(bytes); ++i) {             \
-            fprintf(stderr, "%02X ", (unsigned char)bytes[i]);              \
-        }                                                                   \
-        fprintf(stderr, "\n");                                              \
-        break;                                                              \
-    }                                                                       \
-    if (memcmp(slice.data, bytes, slice.size) != 0) {                       \
-        ++test_result->failed_tests;                                        \
-        fprintf(stderr, "        %s:%d: slice %s differs from bytes.\n",    \
-                __FILE__, __LINE__, slice_name);                            \
-        fprintf(stderr, "        slice: ");                                 \
-        for (size_t i = 0; i < 100 && i < slice.size; ++i) {                \
-            fprintf(stderr, "%02X ", (unsigned char)slice.data[i]);         \
-        }                                                                   \
-        fprintf(stderr, "\n");                                              \
-        fprintf(stderr, "        bytes: ");                                 \
-        for (size_t i = 0; i < 100 && i < sizeof(bytes); ++i) {             \
-            fprintf(stderr, "%02X ", (unsigned char)bytes[i]);              \
-        }                                                                   \
-        fprintf(stderr, "\n");                                              \
-    }                                                                       \
-    }                                                                       \
-    while (0)
-
 #define TEST_SUITE(name)                                                  \
     static void test_suite_##name(TestResult* final_results) {            \
         printf("Testing %s:\n", #name);                                   \
         TestResult suite_results = {.total_tests = 0, .failed_tests = 0}; \
-        TestResult (*__test_functions[])() = {
+        TestResult (*__test_functions[])(void) = {
 #define END_TEST_SUITE()                                                       \
     }                                                                          \
     ;                                                                          \

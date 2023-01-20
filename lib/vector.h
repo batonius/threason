@@ -40,7 +40,7 @@ typedef struct {
         ? THSN_VECTOR_POP_2_VARS((vector), (var2), (var3))       \
         : THSN_RESULT_INPUT_ERROR
 
-static inline ThsnVector thsn_vector_make_empty() {
+static inline ThsnVector thsn_vector_make_empty(void) {
     return (ThsnVector){.buffer = NULL, .capacity = 0, .offset = 0};
 }
 

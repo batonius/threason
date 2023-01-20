@@ -38,7 +38,7 @@ typedef struct {
     ThsnPreparsedValue current_pp_value;
 } ThsnPreparseIterator;
 
-static ThsnPreparsedValue thsn_pp_value_make_empty() {
+static ThsnPreparsedValue thsn_pp_value_make_empty(void) {
     return (ThsnPreparsedValue){.inbuffer_slice = thsn_slice_make_empty(),
                                 .value_offset = 0};
 }

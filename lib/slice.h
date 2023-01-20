@@ -17,7 +17,7 @@
 #define THSN_SLICE_READ_VAR(slice, var) \
     thsn_slice_read(&slice, THSN_MUT_SLICE_FROM_VAR(var))
 
-static inline ThsnSlice thsn_slice_make_empty() {
+static inline ThsnSlice thsn_slice_make_empty(void) {
     return (ThsnSlice){.data = NULL, .size = 0};
 }
 
@@ -82,7 +82,7 @@ static inline ThsnMutSlice thsn_mut_slice_make(char* data, size_t size) {
     return (ThsnMutSlice){.data = data, .size = size};
 }
 
-static inline ThsnMutSlice thsn_mut_slice_make_empty() {
+static inline ThsnMutSlice thsn_mut_slice_make_empty(void) {
     return (ThsnMutSlice){.data = NULL, .size = 0};
 }
 
