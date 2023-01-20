@@ -19,7 +19,6 @@ TWEETS-SRC=$(BENCH-DIR)/tweets/tweets.cpp
 TWEETS-BIN=$(BUILD-DIR)/tweets
 JSONS-DIR=jsons
 TEST-DIR=lib/tests
-DOCS-DIR=docs
 LIB-AR=$(BUILD-DIR)/libthreason.a
 SRCS=$(notdir $(wildcard $(SRC-DIR)/*.c))
 OBJS=$(addprefix $(BUILD-DIR)/, $(patsubst %.c,%.o,$(SRCS)))
@@ -99,13 +98,9 @@ tests: $(addprefix $(BUILD-DIR)/, $(TEST-BINS))
 bins: $(addprefix $(BUILD-DIR)/, $(BIN-BINS)) 
 
 benchmarks: $(TWEETS-BIN)
-
-$(DOCS-DIR):
-	doxygen
 	
 clean:
 	rm -rf $(BUILD-DIR)
-	rm -rf $(DOCS-DIR)
 
 run-tests: clean tests
 	$(BUILD-DIR)/tests
