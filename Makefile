@@ -66,7 +66,7 @@ endif
 
 .SUFFIXES:
 
-.PHONY: all clean tests run-tests 
+.PHONY: all clean tests benchmarks run-tests 
 
 all: $(LIB-AR) tests bins
 
@@ -74,7 +74,7 @@ $(BUILD-DIR):
 	mkdir $(BUILD-DIR)
 
 $(BUILD-DIR)/%.o: $(SRC-DIR)/%.c | $(BUILD-DIR)
-	$(CC) $(CFLAGS) -I$(SRC-DIR) -c $< -o $@
+	$(CC) -xc $(CFLAGS) -I$(SRC-DIR) -c $< -o $@
 
 $(LIB-AR): $(OBJS)
 	$(AR) cr $@ $^
@@ -97,6 +97,8 @@ $(TWEETS-BIN): $(TWEETS-SRC) $(SIMDJSON-OBJ) $(YYJSON-OBJ) $(LIB-AR) | $(BUILD-D
 tests: $(addprefix $(BUILD-DIR)/, $(TEST-BINS))
 
 bins: $(addprefix $(BUILD-DIR)/, $(BIN-BINS)) 
+
+benchmarks: $(TWEETS-BIN)
 
 $(DOCS-DIR):
 	doxygen
